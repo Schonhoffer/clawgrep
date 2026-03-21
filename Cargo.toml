@@ -1,0 +1,44 @@
+[workspace]
+members = [".", "bindings/node", "bindings/python"]
+
+[package]
+name = "clawgrep"
+version = "0.1.0"
+edition = "2021"
+description = "AI grep — search files by meaning, not pattern. A single standalone binary."
+license = "MIT"
+readme = "README.md"
+
+[[bin]]
+name = "clawgrep"
+path = "src/main.rs"
+
+[lib]
+name = "clawgrep"
+path = "src/lib.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+bincode = "1"
+anyhow = "1"
+ignore = "0.4"
+rayon = "1"
+log = "0.4"
+env_logger = "0.11"
+toml = "0.8"
+dirs = "5"
+tract-onnx = "0.22.1"
+tokenizers = { version = "0.22.2", default-features = false, features = ["fancy-regex"] }
+hf-hub = "0.5.0"
+rusqlite = { version = "0.32", features = ["bundled"] }
+regex = "1"
+
+[dev-dependencies]
+tempfile = "3"
+junction = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

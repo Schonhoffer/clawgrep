@@ -1,0 +1,17 @@
+[package]
+name = "clawgrep-node"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clawgrep = { path = "../.." }
+napi = { version = "2", features = ["napi6"] }
+napi-derive = "2"
+anyhow = "1"
+
+[build-dependencies]
+napi-build = "2"

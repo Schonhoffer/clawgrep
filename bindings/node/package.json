@@ -1,0 +1,39 @@
+{
+  "name": "clawgrep",
+  "version": "0.1.0",
+  "description": "AI grep — search files by meaning, not pattern",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "bin": {
+    "clawgrep": "./clawgrep"
+  },
+  "napi": {
+    "name": "clawgrep",
+    "triples": {
+      "defaults": true,
+      "additional": [
+        "aarch64-apple-darwin",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-pc-windows-msvc"
+      ]
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/clawgrep"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.0"
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "prepublishOnly": "napi prepublish -t npm",
+    "version": "napi version"
+  }
+}
