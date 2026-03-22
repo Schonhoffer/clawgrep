@@ -183,7 +183,7 @@ jobs:
           manylinux: auto
           before-script-linux: |
             export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
-            export CFLAGS_aarch64_unknown_linux_gnu="-march=armv8-a"
+            export CFLAGS_aarch64_unknown_linux_gnu="-march=armv8-a -D__ARM_ARCH=8"
         env:
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
 
