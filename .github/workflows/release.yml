@@ -147,14 +147,19 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+            interpreter: -i python3.8 -i python3.9 -i python3.10 -i python3.11 -i python3.12 -i python3.13 -i python3.14
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
+            interpreter: -i python3.8 -i python3.9 -i python3.10 -i python3.11 -i python3.12 -i python3.13 -i python3.14
           - target: x86_64-pc-windows-msvc
             os: windows-latest
+            interpreter: --find-interpreter
           - target: x86_64-apple-darwin
             os: macos-latest
+            interpreter: --find-interpreter
           - target: aarch64-apple-darwin
             os: macos-latest
+            interpreter: --find-interpreter
 
     steps:
       - uses: actions/checkout@v4
@@ -179,13 +184,11 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist -m bindings/python/Cargo.toml --find-interpreter
+          args: --release --out dist -m bindings/python/Cargo.toml ${{ matrix.interpreter }}
           manylinux: auto
           before-script-linux: |
             export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
             export CFLAGS_aarch64_unknown_linux_gnu="-march=armv8-a -D__ARM_ARCH=8"
-            # Remove free-threaded CPython interpreters (PyO3 0.23 cannot build for them)
-            for d in /opt/python/cp*t; do [ -d "$d" ] && rm -rf "$d"; done
         env:
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
 
