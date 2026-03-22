@@ -6,6 +6,8 @@ Combines embedding-based semantic search with substring/regex keyword matching. 
 
 ## Installation
 
+Even though `clawgrep` is primarily used as a CLI binary, it is distributed through language-specific package managers.
+
 ```bash
 cargo install clawgrep        # Rust/Cargo
 npm install -g clawgrep        # Node.js
