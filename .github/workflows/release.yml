@@ -30,9 +30,6 @@ jobs:
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             archive: zip
-          - target: aarch64-pc-windows-msvc
-            os: windows-latest
-            archive: zip
           - target: x86_64-apple-darwin
             os: macos-latest
             archive: tar.gz
@@ -98,8 +95,6 @@ jobs:
             os: ubuntu-latest
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-          - target: aarch64-pc-windows-msvc
-            os: windows-latest
           - target: x86_64-apple-darwin
             os: macos-latest
           - target: aarch64-apple-darwin
@@ -154,8 +149,6 @@ jobs:
             os: ubuntu-latest
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-          - target: aarch64-pc-windows-msvc
-            os: windows-latest
           - target: x86_64-apple-darwin
             os: macos-latest
           - target: aarch64-apple-darwin
@@ -188,7 +181,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist -m bindings/python/Cargo.toml
+          args: --release --out dist -m bindings/python/Cargo.toml --find-interpreter
           manylinux: auto
 
       - uses: actions/upload-artifact@v4

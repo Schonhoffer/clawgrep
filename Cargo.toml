@@ -30,7 +30,7 @@ toml = "0.8"
 dirs = "5"
 tract-onnx = "0.22.1"
 tokenizers = { version = "0.22.2", default-features = false, features = ["fancy-regex"] }
-hf-hub = "0.5.0"
+hf-hub = { version = "0.5.0", default-features = false, features = ["rustls-tls", "tokio", "ureq"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 regex = "1"
 
