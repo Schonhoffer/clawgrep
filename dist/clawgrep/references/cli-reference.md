@@ -14,7 +14,7 @@
 | `--path-boost` | 1.0 | Boost for path/filename matches (0.0 disables) |
 | `--reindex` | false | Force re-embedding all files |
 | `--no-cache` | false | Skip cache reads/writes |
-| `--cache-dir` | `~/.cache/clawgrep/` | Custom cache directory |
+| `--cache-dir` | platform default | Custom cache directory |
 | `--no-gitignore` | false | Don't respect .gitignore |
 | `--ignore-file` | none | Additional ignore file (repeatable) |
 | `--no-recursive` | false | Don't recurse into subdirectories |
@@ -50,6 +50,10 @@ Key differences from grep:
 - Default is semantic + keyword hybrid search, not regex matching.
 - First run on a directory builds an embedding index (takes a few seconds).
   Subsequent runs reuse the cache and are fast.
+- Model weights and embedding cache share the same directory. The default
+  location is platform-specific: `~/.cache/clawgrep/` on Linux,
+  `~/Library/Caches/clawgrep/` on macOS, `AppData\Local\clawgrep\` on Windows.
+  Use `--cache-dir`, `CLAWGREP_CACHE_DIR`, or the config file to override.
 - Always case-insensitive. `-i` is accepted but has no effect.
 
 ## Environment variables
@@ -57,8 +61,9 @@ Key differences from grep:
 | Variable | Description |
 |----------|-------------|
 | `CLAWGREP_CONFIG` | Path to config file (default: `~/.clawgrep.toml`) |
-| `CLAWGREP_CACHE_DIR` | Cache directory (default: `~/.cache/clawgrep/`) |
+| `CLAWGREP_CACHE_DIR` | Cache directory (overrides platform default) |
 | `CLAWGREP_VERBOSE` | Set to `1` to enable verbose output |
+| `NO_COLOR` | Disable coloured output (any value) |
 
 Precedence for cache directory: `--cache-dir` flag > config file `cache_dir` > `CLAWGREP_CACHE_DIR` env var > default.
 

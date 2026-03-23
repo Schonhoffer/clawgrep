@@ -187,11 +187,7 @@ pub fn build_index(files: &[PathBuf], embedder: &Embedder, opts: &IndexOpts) -> 
     }
 
     // Open cache resiliently: if it fails, fall back to no-cache mode.
-    let conn = if opts.reindex {
-        open_db_resilient(opts.custom_cache)
-    } else {
-        open_db_resilient(opts.custom_cache)
-    };
+    let conn = open_db_resilient(opts.custom_cache);
     let Some(conn) = conn else {
         return build_index_no_cache(files, embedder, opts);
     };

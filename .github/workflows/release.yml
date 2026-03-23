@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write
 
+# Prevent parallel releases from racing.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -39,6 +44,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -102,6 +109,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -129,10 +138,26 @@ jobs:
       - name: Build native addon
         run: npx napi build --platform --release --target ${{ matrix.target }}
 
+      - name: Build CLI binary
+        run: cargo build --release --target ${{ matrix.target }} -p clawgrep
+        working-directory: .
+
+      - name: Copy CLI binary into node dir
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp "../../target/${{ matrix.target }}/release/clawgrep.exe" "./clawgrep-${{ matrix.target }}.exe"
+          else
+            cp "../../target/${{ matrix.target }}/release/clawgrep" "./clawgrep-${{ matrix.target }}"
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: node-${{ matrix.target }}
-          path: bindings/node/*.node
+          path: |
+            bindings/node/*.node
+            bindings/node/clawgrep-${{ matrix.target }}
+            bindings/node/clawgrep-${{ matrix.target }}.exe
 
   # ── Python wheels (maturin + PyO3) ──────────────────────────────────
 
@@ -163,6 +188,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -206,6 +233,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -226,6 +255,8 @@ jobs:
         working-directory: bindings/node
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -242,6 +273,28 @@ jobs:
 
       - name: Move artifacts
         run: npx napi artifacts --dir artifacts
+
+      - name: Copy CLI binaries into platform packages
+        shell: bash
+        run: |
+          declare -A TARGET_MAP=(
+            [x86_64-unknown-linux-gnu]=npm/linux-x64-gnu
+            [aarch64-unknown-linux-gnu]=npm/linux-arm64-gnu
+            [x86_64-pc-windows-msvc]=npm/win32-x64-msvc
+            [x86_64-apple-darwin]=npm/darwin-x64
+            [aarch64-apple-darwin]=npm/darwin-arm64
+          )
+          for target in "${!TARGET_MAP[@]}"; do
+            pkg_dir="${TARGET_MAP[$target]}"
+            if [ -d "$pkg_dir" ]; then
+              if [ -f "artifacts/clawgrep-${target}.exe" ]; then
+                cp "artifacts/clawgrep-${target}.exe" "$pkg_dir/clawgrep.exe"
+              elif [ -f "artifacts/clawgrep-${target}" ]; then
+                cp "artifacts/clawgrep-${target}" "$pkg_dir/clawgrep"
+                chmod +x "$pkg_dir/clawgrep"
+              fi
+            fi
+          done
 
       - name: Publish
         run: |

@@ -1,11 +1,11 @@
 {
   "name": "clawgrep",
   "version": "0.1.0",
-  "description": "AI grep — search files by meaning, not pattern",
+  "description": "Like grep with semantic search, for ai agents",
   "main": "index.js",
   "types": "index.d.ts",
   "bin": {
-    "clawgrep": "./clawgrep"
+    "clawgrep": "./cli.js"
   },
   "napi": {
     "name": "clawgrep",
@@ -18,14 +18,15 @@
       ]
     }
   },
-  "license": "MIT",
+  "license": "(MIT OR Apache-2.0)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/clawgrep"
+    "url": "https://github.com/Schonhoffer/clawgrep"
   },
   "files": [
     "index.js",
-    "index.d.ts"
+    "index.d.ts",
+    "cli.js"
   ],
   "devDependencies": {
     "@napi-rs/cli": "^2.18.0"

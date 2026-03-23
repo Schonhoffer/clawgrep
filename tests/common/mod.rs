@@ -13,7 +13,7 @@ use clawgrep::index::{DiscoverOpts, IndexOpts};
 /// competing to download the model simultaneously.
 pub fn shared_embedder() -> &'static Embedder {
     static EMBEDDER: OnceLock<Embedder> = OnceLock::new();
-    EMBEDDER.get_or_init(|| Embedder::new().expect("failed to load embedding model"))
+    EMBEDDER.get_or_init(|| Embedder::new(None).expect("failed to load embedding model"))
 }
 
 pub fn test_discover_opts() -> DiscoverOpts<'static> {

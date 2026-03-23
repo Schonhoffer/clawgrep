@@ -1,16 +1,16 @@
 ---
 name: clawgrep
 description: >
-  Search files by meaning, not just pattern. Combines semantic embedding search
-  with keyword matching for high-quality code and document retrieval. Use when
-  finding relevant code or documentation where the exact wording is unknown,
-  locating functions or logic by intent, searching large codebases where grep
-  misses results, or finding exact identifiers alongside semantic matches.
-  Requires clawgrep CLI installed. Output is grep-compatible.
+  Search files by meaning. Combines semantic embedding search
+  with keyword matching for high-quality code and document retrieval.
+  Use when searching for content where the exact wording is unknown,
+  or when grep misses results across large codebases or folders.
+  Useful for recursively searching large collections of markdown
+  files, like memories. Output is grep-compatible for easy parsing.
 compatibility: >
   Requires the clawgrep binary on PATH. Works on Linux, macOS, and Windows.
   No API keys or network access needed. Install via cargo, npm, or pip.
-license: MIT
+license: MIT OR Apache-2.0
 metadata:
   version: "0.1"
 ---
@@ -26,7 +26,7 @@ API keys.
 clawgrep --version
 ```
 
-If not found, install:
+If not found, it can be installed with any of these methods (only one needed)
 
 ```bash
 cargo install clawgrep        # Rust (recommended)

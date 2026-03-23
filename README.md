@@ -14,7 +14,7 @@ npm install -g clawgrep        # Node.js
 pip install clawgrep           # Python
 ```
 
-Or download a pre-built binary from [GitHub Releases](https://github.com/user/clawgrep/releases) (Linux, macOS, Windows — x86_64 and aarch64).
+Or download a pre-built binary from [GitHub Releases](https://github.com/Schonhoffer/clawgrep/releases) (Linux, macOS, Windows — x86_64 and aarch64).
 
 ## Examples
 
@@ -95,13 +95,34 @@ These match grep conventions.
 
 1. **Discover** files recursively, respecting `.gitignore` and `.clawgrepignore`.
 2. **Chunk** files into overlapping ~20-line blocks for better embedding quality.
-3. **Embed** each chunk with a local ONNX model (BAAI/bge-small-en-v1.5, 384d) using tract (pure-Rust inference).
-4. **Cache** embeddings in a SQLite database at `~/.cache/clawgrep/` (or `--cache-dir`), keyed by file path, mtime, size, and model name. WAL mode allows concurrent readers and serialised writers; optimistic concurrency ensures newer embeddings always win.
+3. **Embed** each chunk with a local ONNX model (BAAI/bge-small-en-v1.5, 384d) using tract (pure-Rust inference). Model weights (~65 MB) are downloaded on first use into the `models/` subdirectory of the cache directory.
+4. **Cache** embeddings and model weights in a platform-specific cache directory (or `--cache-dir`). The SQLite database and downloaded model files share the same directory. WAL mode allows concurrent readers and serialised writers; optimistic concurrency ensures newer embeddings always win.
 5. **Checkpoint** every 25 files during indexing, so interrupted runs resume from roughly where they stopped.
 6. **Keyword search** reads files from disk and does substring matching, regex matching, and basic stemming. This runs independently of embeddings and finds exact strings like barcodes, serial numbers, and error codes.
 7. **Rank** by combining scores: `score = semantic_weight * cosine(query, chunk) + keyword_weight * keyword_match(query, chunk)`. Results are sorted by combined score and truncated to top-k.
 
 Subsequent searches reuse cached embeddings. Only changed files are re-embedded. Multiple clawgrep processes can share the same cache without corruption.
+
+### Cache directory
+
+The default cache location follows OS conventions:
+
+| OS | Default path |
+|----|-------------|
+| Linux | `~/.cache/clawgrep/` |
+| macOS | `~/Library/Caches/clawgrep/` |
+| Windows | `C:\Users\<user>\AppData\Local\clawgrep\` |
+
+Override with `--cache-dir`, `CLAWGREP_CACHE_DIR`, or the `cache_dir` field in the config file. This is useful in Docker containers or non-standard environments where the OS default may not be writable:
+
+```bash
+# Docker / CI
+export CLAWGREP_CACHE_DIR=/workspace/.clawgrep-cache
+clawgrep "query" ./src
+
+# Or in ~/.clawgrep.toml
+# cache_dir = "/workspace/.clawgrep-cache"
+```
 
 ## Configuration
 
@@ -118,7 +139,7 @@ Subsequent searches reuse cached embeddings. Only changed files are re-embedded.
 | `--keyword-weight` | 0.3 | Keyword (substring/regex) weight (0.0-1.0) |
 | `--reindex` | false | Force re-embedding |
 | `--no-cache` | false | Don't read or write cache |
-| `--cache-dir` | `~/.cache/clawgrep/` | Custom cache directory |
+| `--cache-dir` | platform default | Custom cache directory |
 | `--no-gitignore` | false | Don't respect .gitignore |
 | `--ignore-file` | none | Additional ignore file (repeatable) |
 | `--no-recursive` | false | Don't recurse into subdirectories |
@@ -153,8 +174,9 @@ Uses the standard Rust `log` + `env_logger` stack. Logs go to stderr.
 | Variable | Description |
 |----------|-------------|
 | `CLAWGREP_CONFIG` | Path to config file (default: `~/.clawgrep.toml`) |
-| `CLAWGREP_CACHE_DIR` | Cache directory (default: `~/.cache/clawgrep/`) |
+| `CLAWGREP_CACHE_DIR` | Cache directory (overrides platform default) |
 | `CLAWGREP_VERBOSE` | Set to `1` to enable verbose output |
+| `NO_COLOR` | Disable colored output (any value) |
 
 ### Configuration file
 
@@ -176,7 +198,7 @@ All fields are optional. Precedence: CLI flags > config file > environment varia
 
 ## OpenClaw
 
-clawgrep works well as a tool for OpenClaw or other AI agents that need to search a workspace. Recommended setup:
+clawgrep works well as a tool for OpenClaw or other AI agents that need to search a workspace. See [OPENCLAW.md](OPENCLAW.md) for detailed setup instructions, Docker configuration, and troubleshooting. Recommended setup:
 
 1. Pre-configure `~/.clawgrep.toml` with your preferred weights and cache directory. The AI only needs to form a simple command.
 2. Use `--no-color` when parsing output programmatically.
@@ -245,4 +267,4 @@ Shared helpers live in `tests/common/mod.rs`. Unit tests are co-located in each 
 
 ## License
 
-MIT
+Dual-licensed under MIT or Apache 2.0, at your option. See [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE).

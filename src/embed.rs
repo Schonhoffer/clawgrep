@@ -2,9 +2,10 @@
 //!
 //! Uses tract-onnx to load and run a BERT-class ONNX model, with the
 //! `tokenizers` crate for text tokenization. Model weights are downloaded
-//! from HuggingFace Hub on first use (~65 MB).
+//! from HuggingFace Hub on first use (~65 MB) into the `models/`
+//! subdirectory of the cache directory.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result};
@@ -12,6 +13,8 @@ use hf_hub::api::sync::ApiBuilder;
 use rayon::prelude::*;
 use tokenizers::Tokenizer;
 use tract_onnx::prelude::*;
+
+use crate::cache;
 
 /// Default model — BAAI/bge-small-en-v1.5.
 pub const DEFAULT_MODEL: &str = "BAAI/bge-small-en-v1.5";
@@ -35,10 +38,12 @@ pub struct Embedder {
 }
 
 impl Embedder {
-    /// Load the default model.  First call downloads weights to a
-    /// persistent cache in the system temp directory (~65 MB).
-    pub fn new() -> Result<Self> {
-        let cache_dir = model_cache_dir();
+    /// Load the default model.  First call downloads weights (~65 MB)
+    /// into `models/` inside the cache directory.  Pass the same
+    /// `custom_cache` you use for the SQLite embeddings cache so both
+    /// live in one place.
+    pub fn new(custom_cache: Option<&Path>) -> Result<Self> {
+        let cache_dir = model_cache_dir(custom_cache);
         let api = ApiBuilder::new()
             .with_cache_dir(cache_dir)
             .build()
@@ -98,8 +103,10 @@ impl Embedder {
     }
 
     /// Embed a batch of texts. Returns one `Vec<f32>` per input, each of
-    /// length [`DEFAULT_DIM`].  Uses rayon to embed chunks in parallel
-    /// across all available cores.
+    /// length [`DEFAULT_DIM`].  Uses rayon to embed chunks in parallel.
+    /// Both `SimplePlan::run()` and `Tokenizer::encode()` take `&self`
+    /// and allocate their own working buffers, so concurrent calls from
+    /// separate threads are safe with no contention.
     pub fn embed_batch(&self, texts: &[&str], verbose: bool) -> Result<Vec<Vec<f32>>> {
         if texts.is_empty() {
             return Ok(vec![]);
@@ -184,15 +191,11 @@ impl Embedder {
 // Model cache
 // ---------------------------------------------------------------------------
 
-/// Return a persistent directory for model weights.  Uses
-/// `CLAWGREP_MODEL_DIR` if set, otherwise `<system-temp>/clawgrep_models`.
-/// The directory is created if it doesn't exist.
-fn model_cache_dir() -> PathBuf {
-    let dir = if let Ok(v) = std::env::var("CLAWGREP_MODEL_DIR") {
-        PathBuf::from(v)
-    } else {
-        std::env::temp_dir().join("clawgrep_models")
-    };
+/// Return a persistent directory for model weights.  Lives inside the
+/// same cache directory used for the SQLite embeddings DB, under a
+/// `models/` subdirectory.
+fn model_cache_dir(custom_cache: Option<&Path>) -> PathBuf {
+    let dir = cache::cache_dir(custom_cache).join("models");
     let _ = std::fs::create_dir_all(&dir);
     dir
 }

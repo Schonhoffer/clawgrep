@@ -198,17 +198,21 @@ fn semantic_scores(
                 .chunks
                 .iter()
                 .enumerate()
-                .map(|(i, cb)| {
+                .filter_map(|(i, cb)| {
                     let start = i * dim;
-                    let chunk_emb = &entry.embeddings[start..start + dim];
+                    let end = start + dim;
+                    if end > entry.embeddings.len() {
+                        return None;
+                    }
+                    let chunk_emb = &entry.embeddings[start..end];
                     let sim = cosine_similarity(query_emb, chunk_emb);
-                    (
+                    Some((
                         entry.path.clone(),
                         cb.start_line,
                         cb.end_line,
                         cb.boost,
                         sim,
-                    )
+                    ))
                 })
                 .collect::<Vec<_>>()
         })

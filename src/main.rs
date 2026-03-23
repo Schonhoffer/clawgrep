@@ -276,14 +276,15 @@ fn run() -> Result<bool> {
         cfg.path_boost.unwrap_or(cli.path_boost)
     };
 
-    let color = !cli.no_color && io::stdout().is_terminal();
+    let color =
+        !cli.no_color && std::env::var_os("NO_COLOR").is_none() && io::stdout().is_terminal();
     let reading_stdin = cli.paths.is_empty();
 
     // Load model.
     if verbose {
         eprintln!("clawgrep: loading model...");
     }
-    let embedder = Embedder::new()?;
+    let embedder = Embedder::new(cache_dir.as_deref())?;
     if verbose {
         eprintln!("clawgrep: model loaded");
     }

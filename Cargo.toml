@@ -6,7 +6,8 @@ name = "clawgrep"
 version = "0.1.0"
 edition = "2021"
 description = "AI grep — search files by meaning, not pattern. A single standalone binary."
-license = "MIT"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Schonhoffer/clawgrep"
 readme = "README.md"
 
 [[bin]]
@@ -30,7 +31,7 @@ toml = "0.8"
 dirs = "5"
 tract-onnx = "0.22.1"
 tokenizers = { version = "0.22.2", default-features = false, features = ["fancy-regex"] }
-hf-hub = { version = "0.5.0", default-features = false, features = ["rustls-tls", "tokio", "ureq"] }
+hf-hub = { version = "0.5.0", default-features = false, features = ["rustls-tls", "ureq"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 regex = "1"
 

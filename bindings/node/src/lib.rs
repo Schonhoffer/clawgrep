@@ -105,7 +105,8 @@ pub fn search(
         return Ok(vec![]);
     }
 
-    let embedder = Embedder::new().map_err(|e| Error::from_reason(format!("{e}")))?;
+    let embedder =
+        Embedder::new(cache_dir_path.as_deref()).map_err(|e| Error::from_reason(format!("{e}")))?;
 
     let index_opts = IndexOpts {
         reindex,
