@@ -1269,3 +1269,101 @@ fn grep_compat_stdin_list_files() {
         "stdin + -l should output '(standard input)'"
     );
 }
+
+// ── CLAWGREP_CACHE_DIR environment variable ────────────────────────────
+
+#[test]
+fn env_cache_dir_is_used() {
+    shared_embedder();
+    let dir = TempDir::new().unwrap();
+    make_project(dir.path());
+
+    let cache_dir = TempDir::new().unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_clawgrep"))
+        .env("CLAWGREP_CACHE_DIR", cache_dir.path().to_str().unwrap())
+        .args([
+            "error",
+            dir.path().to_str().unwrap(),
+            "--no-color",
+            "--no-gitignore",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    // Cache DB should have been created inside the env var directory.
+    assert!(
+        cache_dir.path().join("cache.db").exists(),
+        "cache.db should be created in CLAWGREP_CACHE_DIR"
+    );
+}
+
+#[test]
+fn env_cache_dir_overridden_by_cli_flag() {
+    shared_embedder();
+    let dir = TempDir::new().unwrap();
+    make_project(dir.path());
+
+    let env_cache = TempDir::new().unwrap();
+    let cli_cache = TempDir::new().unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_clawgrep"))
+        .env("CLAWGREP_CACHE_DIR", env_cache.path().to_str().unwrap())
+        .args([
+            "error",
+            dir.path().to_str().unwrap(),
+            "--no-color",
+            "--no-gitignore",
+            "--cache-dir",
+            cli_cache.path().to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    // CLI flag should win: cache goes to cli_cache, not env_cache.
+    assert!(
+        cli_cache.path().join("cache.db").exists(),
+        "cache.db should be in --cache-dir, not CLAWGREP_CACHE_DIR"
+    );
+    assert!(
+        !env_cache.path().join("cache.db").exists(),
+        "env dir should NOT get cache when --cache-dir is set"
+    );
+}
+
+#[test]
+fn env_cache_dir_overridden_by_config_file() {
+    shared_embedder();
+    let dir = TempDir::new().unwrap();
+    make_project(dir.path());
+
+    let env_cache = TempDir::new().unwrap();
+    let toml_cache = TempDir::new().unwrap();
+    let config_dir = TempDir::new().unwrap();
+    let config_path = config_dir.path().join("clawgrep.toml");
+    fs::write(
+        &config_path,
+        format!("cache_dir = {:?}\n", toml_cache.path().to_str().unwrap()),
+    )
+    .unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_clawgrep"))
+        .env("CLAWGREP_CONFIG", config_path.to_str().unwrap())
+        .env("CLAWGREP_CACHE_DIR", env_cache.path().to_str().unwrap())
+        .args([
+            "error",
+            dir.path().to_str().unwrap(),
+            "--no-color",
+            "--no-gitignore",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    // Config file should win over env var.
+    assert!(
+        toml_cache.path().join("cache.db").exists(),
+        "cache.db should be in config cache_dir, not CLAWGREP_CACHE_DIR"
+    );
+    assert!(
+        !env_cache.path().join("cache.db").exists(),
+        "env dir should NOT get cache when config has cache_dir"
+    );
+}

@@ -261,7 +261,9 @@ fn run() -> Result<bool> {
     let cache_dir = if raw_args.iter().any(|a| a == "--cache-dir") {
         cli.cache_dir.clone()
     } else {
-        cli.cache_dir.clone().or(cfg.cache_dir.clone())
+        cfg.cache_dir
+            .clone()
+            .or_else(|| std::env::var("CLAWGREP_CACHE_DIR").ok().map(PathBuf::from))
     };
     let no_gitignore = if raw_args.iter().any(|a| a == "--no-gitignore") {
         cli.no_gitignore

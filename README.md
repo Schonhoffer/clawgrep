@@ -148,6 +148,14 @@ RUST_LOG=clawgrep=info clawgrep "query" .
 
 Uses the standard Rust `log` + `env_logger` stack. Logs go to stderr.
 
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `CLAWGREP_CONFIG` | Path to config file (default: `~/.clawgrep.toml`) |
+| `CLAWGREP_CACHE_DIR` | Cache directory (default: `~/.cache/clawgrep/`) |
+| `CLAWGREP_VERBOSE` | Set to `1` to enable verbose output |
+
 ### Configuration file
 
 Settings can be placed in `~/.clawgrep.toml` to avoid passing flags every time. Set the `CLAWGREP_CONFIG` environment variable to use a different path.
@@ -164,7 +172,7 @@ no_gitignore = false
 cache_dir = "/tmp/clawgrep-cache"
 ```
 
-All fields are optional. CLI flags override config file values.
+All fields are optional. Precedence: CLI flags > config file > environment variables.
 
 ## OpenClaw
 

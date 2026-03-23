@@ -52,6 +52,16 @@ Key differences from grep:
   Subsequent runs reuse the cache and are fast.
 - Always case-insensitive. `-i` is accepted but has no effect.
 
+## Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `CLAWGREP_CONFIG` | Path to config file (default: `~/.clawgrep.toml`) |
+| `CLAWGREP_CACHE_DIR` | Cache directory (default: `~/.cache/clawgrep/`) |
+| `CLAWGREP_VERBOSE` | Set to `1` to enable verbose output |
+
+Precedence for cache directory: `--cache-dir` flag > config file `cache_dir` > `CLAWGREP_CACHE_DIR` env var > default.
+
 ## Configuration file
 
 Settings can be pre-configured in `~/.clawgrep.toml` so commands stay simple.
@@ -66,7 +76,7 @@ path_boost = 1.5
 cache_dir = "/tmp/clawgrep-cache"
 ```
 
-All fields are optional. CLI flags override config file values.
+All fields are optional. Precedence: CLI flags > config file > environment variables.
 
 Pre-configuring this file is recommended so that search commands only need a
 query and path.
