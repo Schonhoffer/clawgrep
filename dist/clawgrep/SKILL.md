@@ -17,8 +17,7 @@ metadata:
 
 # clawgrep
 
-Semantic + keyword file search. Output is grep-compatible. Runs locally, no
-API keys.
+Semantic + keyword file search. Output is grep-compatible. Runs locally, no network access needed after (automatic) model download.
 
 ## Check availability
 
