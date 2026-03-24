@@ -297,9 +297,25 @@ jobs:
             fi
           done
 
-      - name: Publish
+      - name: Copy README into package directory
+        run: cp ../../README.md ./README.md
+
+      - name: Publish platform packages
+        shell: bash
         run: |
-          npm publish --access public
+          for pkg_dir in npm/*/; do
+            if [ -f "$pkg_dir/package.json" ]; then
+              echo "Publishing $pkg_dir..."
+              cd "$pkg_dir"
+              npm publish --access public || echo "Skipping $pkg_dir (may already exist)"
+              cd ../..
+            fi
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish main package
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
