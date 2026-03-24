@@ -1,4 +1,4 @@
-﻿# clawgrep â€” Agent Instructions
+﻿# clawgrep Agent Instructions
 
 Overall goal of this project: **A CLI utility for LLMs that should be like grep for compatibility, but incorporate semantic search.**
 
