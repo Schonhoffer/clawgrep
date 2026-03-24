@@ -18,10 +18,11 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # ── Portable binaries ───────────────────────────────────────────────
+  # ── Unified build: CLI binary + Node addon + Python wheel ───────────
+  # One job per target so each OS/arch compiles Rust only once.
 
-  build-binaries:
-    name: Binary (${{ matrix.target }})
+  build:
+    name: Build (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -30,18 +31,23 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             archive: tar.gz
+            python_interpreter: -i python3.8 -i python3.9 -i python3.10 -i python3.11 -i python3.12 -i python3.13 -i python3.14
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             archive: tar.gz
+            python_interpreter: -i python3.8 -i python3.9 -i python3.10 -i python3.11 -i python3.12 -i python3.13 -i python3.14
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             archive: zip
+            python_interpreter: --find-interpreter
           - target: x86_64-apple-darwin
             os: macos-latest
             archive: tar.gz
+            python_interpreter: --find-interpreter
           - target: aarch64-apple-darwin
             os: macos-latest
             archive: tar.gz
+            python_interpreter: --find-interpreter
 
     steps:
       - uses: actions/checkout@v4
@@ -52,20 +58,38 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      # Install cross tools on the host but do NOT write CC/linker vars
+      # to $GITHUB_ENV — they would leak into the maturin Docker
+      # container where aarch64-linux-gnu-gcc does not exist.
       - name: Install cross-compilation tools
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up QEMU
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        uses: docker/setup-qemu-action@v3
 
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
 
-      - name: Build
+      # ── CLI binary ──────────────────────────────────────────────────
+
+      - name: Build CLI binary
         run: cargo build --release --target ${{ matrix.target }} -p clawgrep
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && 'aarch64-linux-gnu-gcc' || '' }}
+          CC_aarch64_unknown_linux_gnu: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && 'aarch64-linux-gnu-gcc' || '' }}
 
       - name: Package (unix)
         if: matrix.archive == 'tar.gz'
@@ -85,66 +109,22 @@ jobs:
           name: binary-${{ matrix.target }}
           path: clawgrep-${{ github.ref_name }}-${{ matrix.target }}.*
 
-  # ── Node.js native addon (napi-rs) ──────────────────────────────────
+      # ── Node.js native addon ───────────────────────────────────────
 
-  build-node:
-    name: Node (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
+      - name: Install Node dependencies
         working-directory: bindings/node
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-          - target: x86_64-apple-darwin
-            os: macos-latest
-          - target: aarch64-apple-darwin
-            os: macos-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Install cross-compilation tools
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - run: npm install
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: node-${{ matrix.target }}
-          workspaces: "."
+        run: npm install
 
       - name: Build native addon
+        working-directory: bindings/node
         run: npx napi build --platform --release --target ${{ matrix.target }}
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && 'aarch64-linux-gnu-gcc' || '' }}
+          CC_aarch64_unknown_linux_gnu: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && 'aarch64-linux-gnu-gcc' || '' }}
 
-      - name: Build CLI binary
-        run: cargo build --release --target ${{ matrix.target }} -p clawgrep
-        working-directory: .
-
-      - name: Copy CLI binary into node dir
+      - name: Copy CLI binary for Node package
         shell: bash
+        working-directory: bindings/node
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp "../../target/${{ matrix.target }}/release/clawgrep.exe" "./clawgrep-${{ matrix.target }}.exe"
@@ -160,59 +140,16 @@ jobs:
             bindings/node/clawgrep-${{ matrix.target }}
             bindings/node/clawgrep-${{ matrix.target }}.exe
 
-  # ── Python wheels (maturin + PyO3) ──────────────────────────────────
+      # ── Python wheel ───────────────────────────────────────────────
+      # The maturin step does NOT receive CC_aarch64_unknown_linux_gnu
+      # because we never wrote it to $GITHUB_ENV. The manylinux cross
+      # Docker image has its own cross-compiler at its own path.
 
-  build-python:
-    name: Python (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-    env:
-      PYO3_USE_ABI3_FORWARD_COMPATIBILITY: 1
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            interpreter: -i python3.8 -i python3.9 -i python3.10 -i python3.11 -i python3.12 -i python3.13 -i python3.14
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            interpreter: -i python3.8 -i python3.9 -i python3.10 -i python3.11 -i python3.12 -i python3.13 -i python3.14
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            interpreter: --find-interpreter
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            interpreter: --find-interpreter
-          - target: aarch64-apple-darwin
-            os: macos-latest
-            interpreter: --find-interpreter
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Set up QEMU
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        uses: docker/setup-qemu-action@v3
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: python-${{ matrix.target }}
-
-      - name: Build wheel
+      - name: Build Python wheel
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist -m bindings/python/Cargo.toml ${{ matrix.interpreter }}
+          args: --release --out dist -m bindings/python/Cargo.toml ${{ matrix.python_interpreter }}
           manylinux: auto
           before-script-linux: |
             export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
@@ -229,7 +166,7 @@ jobs:
 
   publish-cargo:
     name: Publish crates.io
-    needs: [build-binaries, build-node, build-python]
+    needs: [build]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -248,7 +185,7 @@ jobs:
 
   publish-npm:
     name: Publish npm
-    needs: [build-binaries, build-node, build-python]
+    needs: [build]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     defaults:
@@ -323,7 +260,7 @@ jobs:
 
   publish-pypi:
     name: Publish PyPI
-    needs: [build-binaries, build-node, build-python]
+    needs: [build]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -339,10 +276,11 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
   # ── GitHub Release ──────────────────────────────────────────────────
+  # Depends on all publish jobs so no partial release is created.
 
   release:
     name: GitHub Release
-    needs: [build-binaries, build-node, build-python]
+    needs: [publish-cargo, publish-npm, publish-pypi]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
