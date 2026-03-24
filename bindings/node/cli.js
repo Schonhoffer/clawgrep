@@ -6,12 +6,11 @@ const os = require("os");
 const fs = require("fs");
 
 const PLATFORM_PACKAGES = {
-  "darwin-arm64": "@clawgrep/darwin-arm64",
-  "darwin-x64": "@clawgrep/darwin-x64",
-  "linux-arm64": "@clawgrep/linux-arm64-gnu",
-  "linux-x64": "@clawgrep/linux-x64-gnu",
-  "win32-x64": "@clawgrep/win32-x64-msvc",
-  "win32-arm64": "@clawgrep/win32-arm64-msvc",
+  "darwin-arm64": "clawgrep-darwin-arm64",
+  "darwin-x64": "clawgrep-darwin-x64",
+  "linux-arm64": "clawgrep-linux-arm64-gnu",
+  "linux-x64": "clawgrep-linux-x64-gnu",
+  "win32-x64": "clawgrep-win32-x64-msvc",
 };
 
 function getBinaryPath() {
