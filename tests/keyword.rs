@@ -125,11 +125,7 @@ fn keyword_empty_query() {
 #[test]
 fn keyword_cjk_exact_match() {
     let dir = TempDir::new().unwrap();
-    fs::write(
-        dir.path().join("zh.txt"),
-        "数据库连接失败\n服务器已启动\n",
-    )
-    .unwrap();
+    fs::write(dir.path().join("zh.txt"), "数据库连接失败\n服务器已启动\n").unwrap();
     let files = vec![dir.path().join("zh.txt")];
     let hits = keyword_search("数据库", &files);
     assert!(!hits.is_empty(), "should find CJK substring");
@@ -171,14 +167,13 @@ fn keyword_nfc_normalization() {
 #[test]
 fn keyword_cjk_punctuation_splitting() {
     let dir = TempDir::new().unwrap();
-    fs::write(
-        dir.path().join("jp.txt"),
-        "エラー、接続、データベース\n",
-    )
-    .unwrap();
+    fs::write(dir.path().join("jp.txt"), "エラー、接続、データベース\n").unwrap();
     let files = vec![dir.path().join("jp.txt")];
     let hits = keyword_search("接続", &files);
-    assert!(!hits.is_empty(), "should find word split on CJK punctuation");
+    assert!(
+        !hits.is_empty(),
+        "should find word split on CJK punctuation"
+    );
 }
 
 #[test]
