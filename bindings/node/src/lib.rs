@@ -12,11 +12,11 @@ use clawgrep::search::{hybrid_search, SearchOpts};
 pub struct JsSearchResult {
     /// File path containing the match.
     pub file: String,
-    /// 1-based start line of the matching chunk.
+    /// 1-based start line of the match.
     pub line_num: u32,
-    /// End line of the matching chunk.
+    /// End line of the match.
     pub end_line: u32,
-    /// The matched chunk text.
+    /// The matched text.
     pub text: String,
     /// Combined relevance score (higher = more relevant).
     pub score: f64,

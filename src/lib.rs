@@ -1,4 +1,4 @@
-//! clawgrep — AI grep for the terminal.
+//! clawgrep — Grep-like CLI with hybrid semantic and keyword search.
 //!
 //! This is the library crate that exposes the core building blocks:
 //!
@@ -7,8 +7,10 @@
 //! - [`index`] — file discovery and incremental re-indexing with checkpointing
 //! - [`keyword`] — substring/regex/stemming keyword search on live files
 //! - [`search`] — hybrid (semantic + keyword) search and ranking
+//! - [`cli`] — full CLI entry point, reusable from bindings
 
 pub mod cache;
+pub mod cli;
 pub mod config;
 pub mod embed;
 pub mod index;

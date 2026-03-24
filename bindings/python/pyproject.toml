@@ -5,13 +5,16 @@ build-backend = "maturin"
 [project]
 name = "clawgrep"
 version = "0.1.0"
-description = "AI grep — search files by meaning, not pattern"
+description = "Grep-like CLI with hybrid semantic and keyword search"
 license = { text = "MIT OR Apache-2.0" }
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
 ]
+
+[project.scripts]
+clawgrep = "clawgrep:main"
 
 [tool.maturin]
 manifest-path = "Cargo.toml"

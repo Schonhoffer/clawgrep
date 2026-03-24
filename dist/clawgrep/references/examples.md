@@ -5,37 +5,37 @@
 Search a directory for a concept:
 
 ```bash
-clawgrep --no-color "database connection timeout" ./src
+clawgrep --no-color "previous discussion about auth flow" ./memory
 ```
 
 Output:
 
 ```
-src/db.rs:42:let pool = ConnectionPool::new(config.timeout)
-src/db.rs:78:connection.reconnect_with_backoff()
-src/db.rs:15:use crate::pool::{ConnectionPool, PoolConfig};
-src/config.rs:23:pub db_pool_size: usize,
-src/config.rs:24:pub db_timeout_ms: u64,
+memory/2025-06-12-auth-design.md:8:Decided to use OAuth2 with PKCE for all client auth.
+memory/2025-06-12-auth-design.md:14:Token refresh should be transparent to the user.
+memory/2025-06-10-planning.md:3:Auth flow is the top priority for the sprint.
+memory/archive/2025-05-session-notes.md:42:Discussed moving auth to a separate service.
+memory/archive/2025-05-session-notes.md:87:Need to revisit token expiry policy.
 ```
 
 Results are ordered by relevance (best match first), not by file position.
 
 ## Context lines
 
-Show surrounding code with `-C`:
+Show surrounding text with `-C`:
 
 ```bash
-clawgrep --no-color -C 2 "authentication middleware" ./src
+clawgrep --no-color -C 2 "deployment rollback procedure" ./memory
 ```
 
 Output:
 
 ```
-src/auth.rs-10-use crate::token::verify_jwt;
-src/auth.rs-11-
-src/auth.rs:12:pub async fn auth_middleware(req: Request) -> Result<Request> {
-src/auth.rs-13-    let token = req.header("Authorization");
-src/auth.rs-14-    let claims = verify_jwt(token)?;
+memory/2025-07-01-incident.md-5-The deploy went out at 14:32 UTC.
+memory/2025-07-01-incident.md-6-
+memory/2025-07-01-incident.md:7:Rollback steps: revert the tag, re-deploy previous image, flush cache.
+memory/2025-07-01-incident.md-8-Confirmed service restored at 14:58 UTC.
+memory/2025-07-01-incident.md-9-Post-mortem scheduled for Friday.
 ```
 
 Match lines use `:` as separator. Context lines use `-`. Identical to grep.
@@ -45,48 +45,48 @@ Match lines use `:` as separator. Context lines use `-`. Identical to grep.
 Append scores with `--show-score`:
 
 ```bash
-clawgrep --no-color --show-score "database connection" ./src
+clawgrep --no-color --show-score "rate limiting strategy" ./memory
 ```
 
 Output:
 
 ```
-src/db.rs:42:let pool = ConnectionPool::new(config.timeout)	(0.912)
-src/db.rs:78:connection.reconnect_with_backoff()	(0.847)
+memory/2025-06-20-api-design.md:18:Use token bucket for rate limiting, 100 req/min per user.	(0.912)
+memory/archive/2025-05-brainstorm.md:33:Consider sliding window rate limiter.	(0.847)
 ```
 
 Tab-separated score (0.0–1.0) appended to each line.
 
 ## Exact identifier search
 
-Find a specific function name by shifting weights toward keyword:
+Find a specific note ID or tag by shifting weights toward keyword:
 
 ```bash
-clawgrep --no-color --keyword-weight 0.8 --semantic-weight 0.2 "handleUserAuth" ./src
+clawgrep --no-color --keyword-weight 0.8 --semantic-weight 0.2 "PROJ-1042" ./memory
 ```
 
 Output:
 
 ```
-src/auth.rs:45:pub fn handleUserAuth(req: &Request) -> AuthResult {
-src/routes.rs:12:use crate::auth::handleUserAuth;
-src/routes.rs:78:let result = handleUserAuth(&req);
+memory/2025-06-15-standup.md:4:Picked up PROJ-1042, needs design review first.
+memory/2025-06-18-review.md:12:PROJ-1042 approved with minor changes.
+memory/archive/2025-06-backlog.md:27:PROJ-1042: add webhook retry support.
 ```
 
 ## Concept search
 
-Find code by intent when you don't know the exact wording:
+Find notes by intent when you don't know the exact wording:
 
 ```bash
-clawgrep --no-color "retry logic with exponential backoff" ./src
+clawgrep --no-color "decision about migration strategy" ./memory
 ```
 
 Output:
 
 ```
-src/http.rs:91:async fn retry_request(url: &str, max_attempts: u32) -> Result<Response> {
-src/http.rs:95:    let delay = Duration::from_millis(100 * 2u64.pow(attempt));
-src/http.rs:88:/// Retries failed HTTP requests with increasing delays.
+memory/2025-06-22-architecture.md:9:Agreed to do incremental schema migrations, no big-bang cutover.
+memory/2025-06-22-architecture.md:15:Each migration must be reversible and tested in staging first.
+memory/archive/2025-05-planning.md:41:Data migration approach still undecided — revisit next week.
 ```
 
 ## Listing matching files
@@ -94,15 +94,15 @@ src/http.rs:88:/// Retries failed HTTP requests with increasing delays.
 Get only filenames with `-l`:
 
 ```bash
-clawgrep --no-color -l "database" ./src
+clawgrep --no-color -l "deployment" ./memory
 ```
 
 Output:
 
 ```
-src/db.rs
-src/config.rs
-src/migrations.rs
+memory/2025-07-01-incident.md
+memory/2025-06-28-release.md
+memory/archive/2025-05-deploy-notes.md
 ```
 
 ## Match count
@@ -110,15 +110,15 @@ src/migrations.rs
 Count matches per file with `-c`:
 
 ```bash
-clawgrep --no-color -c "error" ./src
+clawgrep --no-color -c "performance" ./memory
 ```
 
 Output:
 
 ```
-src/handler.rs:3
-src/db.rs:2
-src/config.rs:1
+memory/2025-06-25-benchmarks.md:3
+memory/2025-06-20-api-design.md:2
+memory/archive/2025-05-brainstorm.md:1
 ```
 
 ## Quiet / existence check
@@ -126,15 +126,15 @@ src/config.rs:1
 Check whether something exists without output:
 
 ```bash
-clawgrep -q "TODO" ./src
+clawgrep -q "API key rotation" ./memory
 echo $?   # 0 if found, 1 if not
 ```
 
 Useful in conditionals:
 
 ```bash
-if clawgrep -q "security vulnerability" ./audit; then
-  echo "Issues found"
+if clawgrep -q "unresolved action item" ./memory; then
+  echo "Outstanding items found"
 fi
 ```
 
@@ -143,18 +143,18 @@ fi
 Rank filename matches higher with `--path-boost`:
 
 ```bash
-clawgrep --no-color --path-boost 2.0 "utils" ./src
+clawgrep --no-color --path-boost 2.0 "incident" ./memory
 ```
 
 Output:
 
 ```
-src/utils.rs:1://! General utility functions.
-src/utils.rs:15:pub fn format_duration(d: Duration) -> String {
-src/handler.rs:3:use crate::utils::format_duration;
+memory/2025-07-01-incident.md:1:# Production incident — cache invalidation failure
+memory/2025-07-01-incident.md:7:Rollback steps: revert the tag, re-deploy previous image, flush cache.
+memory/2025-06-28-release.md:22:No incidents reported after the 2.1 release.
 ```
 
-The file named `utils.rs` is ranked first because `--path-boost 2.0` doubles
+The file named `incident.md` is ranked first because `--path-boost 2.0` doubles
 the weight of path matches.
 
 ## More results
@@ -162,7 +162,7 @@ the weight of path matches.
 Get more results with `-k`:
 
 ```bash
-clawgrep --no-color -k 20 "error handling" ./src
+clawgrep --no-color -k 20 "error handling" ./memory
 ```
 
 Returns up to 20 results instead of the default 5.
@@ -172,7 +172,7 @@ Returns up to 20 results instead of the default 5.
 Filter out low-quality results:
 
 ```bash
-clawgrep --no-color --min-score 0.5 "authentication" ./src
+clawgrep --no-color --min-score 0.5 "onboarding checklist" ./memory
 ```
 
 Only returns results with a combined score of 0.5 or higher.
@@ -182,7 +182,7 @@ Only returns results with a combined score of 0.5 or higher.
 Search piped content (no caching):
 
 ```bash
-cat error.log | clawgrep --no-color "timeout"
+cat session-log.txt | clawgrep --no-color "action item"
 git diff | clawgrep --no-color "security"
 ```
 
@@ -190,8 +190,8 @@ When reading from stdin with a single source, the filename prefix is omitted
 (matching grep behavior):
 
 ```
-42:connection timed out after 30s
-78:timeout exceeded for request /api/health
+12:Action item: finalize the API contract by Friday.
+47:Action item: schedule design review with the team.
 ```
 
 ## Custom ignore file
@@ -209,7 +209,7 @@ The ignore file uses the same syntax as `.gitignore`.
 If results seem stale after file changes:
 
 ```bash
-clawgrep --no-color --reindex "startup sequence" ./src
+clawgrep --no-color --reindex "meeting notes" ./memory
 ```
 
 ## No-cache mode

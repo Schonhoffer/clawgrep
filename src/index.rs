@@ -1,9 +1,9 @@
 //! File discovery and incremental indexing.
 //!
 //! Uses the `ignore` crate to respect `.gitignore` (and `.clawgrepignore`)
-//! rules.  Files are split into paragraph-sized chunks (~20 lines with
-//! 5-line overlap) for better embedding quality.  Only stale files are
-//! re-embedded.
+//! rules.  Files are split into paragraph-sized chunks using token-count
+//! estimation and natural-break detection for better embedding quality.
+//! Only stale files are re-embedded.
 //!
 //! Embeddings are persisted to a SQLite database with periodic checkpointing
 //! so that interrupted indexing resumes from roughly where it stopped.
@@ -21,10 +21,20 @@ use crate::cache::{
 };
 use crate::embed::Embedder;
 
-/// Default number of lines per chunk.
-pub const CHUNK_LINES: usize = 20;
+/// Maximum lines in a single chunk, to keep results granular even when
+/// token counts are low (e.g. sparse code).
+const MAX_CHUNK_LINES: usize = 20;
+
+/// Target tokens per chunk.  The embedding model accepts up to 128 tokens;
+/// aiming for ~100 leaves headroom for [CLS]/[SEP] special tokens.
+const TARGET_CHUNK_TOKENS: usize = 100;
+
 /// Number of overlapping lines between consecutive chunks.
-pub const CHUNK_OVERLAP: usize = 5;
+const CHUNK_OVERLAP: usize = 5;
+
+/// How many lines to search backward from the target split point for a
+/// natural break (blank line or section header).
+const BOUNDARY_WINDOW: usize = 5;
 
 /// How many files to embed before committing a checkpoint to the database.
 const CHECKPOINT_INTERVAL: usize = 25;
@@ -117,7 +127,7 @@ pub struct TextChunk {
     pub boost: f32,
 }
 
-/// Split file content into overlapping chunks of ~`CHUNK_LINES` lines.
+/// Split file content into overlapping, boundary-aware chunks.
 pub fn chunk_file(path: &Path) -> Result<Vec<TextChunk>> {
     let content =
         fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
@@ -128,13 +138,59 @@ pub fn chunk_file(path: &Path) -> Result<Vec<TextChunk>> {
     Ok(make_chunks(&all_lines))
 }
 
-/// Core chunking logic operating on a slice of lines.
+/// Rough token count for a line (~4 chars per token for BERT tokenizers).
+fn estimate_tokens(line: &str) -> usize {
+    if line.is_empty() {
+        return 0;
+    }
+    (line.len() / 4).max(1)
+}
+
+/// A blank line or markdown header — natural places to split chunks.
+fn is_natural_break(line: &str) -> bool {
+    let trimmed = line.trim();
+    trimmed.is_empty() || trimmed.starts_with('#')
+}
+
+/// Core chunking logic.  Accumulates lines until *either* the estimated
+/// token count reaches `TARGET_CHUNK_TOKENS` or the line count reaches
+/// `MAX_CHUNK_LINES`.  Before splitting, it searches backward up to
+/// `BOUNDARY_WINDOW` lines for a natural break (blank line or heading)
+/// and prefers that as the split point.
 fn make_chunks(lines: &[&str]) -> Vec<TextChunk> {
     let mut chunks = Vec::new();
-    let step = CHUNK_LINES.saturating_sub(CHUNK_OVERLAP).max(1);
     let mut start = 0;
+
     while start < lines.len() {
-        let end = (start + CHUNK_LINES).min(lines.len());
+        // Accumulate lines until we hit a limit.
+        let mut tokens = 0;
+        let mut end = start;
+        while end < lines.len() {
+            let lt = estimate_tokens(lines[end]);
+            if (tokens + lt > TARGET_CHUNK_TOKENS || end - start >= MAX_CHUNK_LINES) && end > start
+            {
+                break;
+            }
+            tokens += lt;
+            end += 1;
+        }
+
+        // If we stopped before EOF, look back for a natural break.
+        if end < lines.len() && end > start + 1 {
+            let search_from = end.saturating_sub(BOUNDARY_WINDOW).max(start + 1);
+            for i in (search_from..end).rev() {
+                if is_natural_break(lines[i]) {
+                    end = i;
+                    break;
+                }
+            }
+        }
+
+        // Must always make progress.
+        if end == start {
+            end = start + 1;
+        }
+
         let text = lines[start..end].join("\n");
         chunks.push(TextChunk {
             start_line: start + 1,
@@ -142,11 +198,15 @@ fn make_chunks(lines: &[&str]) -> Vec<TextChunk> {
             text,
             boost: 1.0,
         });
-        start += step;
-        if end == lines.len() {
+
+        if end >= lines.len() {
             break;
         }
+
+        // Next chunk starts CHUNK_OVERLAP lines before the end.
+        start = end.saturating_sub(CHUNK_OVERLAP).max(start + 1);
     }
+
     chunks
 }
 
@@ -348,7 +408,7 @@ fn embed_files(
     for (fi, path) in files.iter().enumerate() {
         if verbose {
             eprintln!(
-                "clawgrep: [{}/{}] chunking {}",
+                "clawgrep: [{}/{}] indexing {}",
                 offset + fi + 1,
                 total,
                 path.display()
@@ -378,7 +438,7 @@ fn embed_files(
     }
 
     if verbose {
-        eprintln!("clawgrep: embedding {} total chunks...", all_texts.len());
+        eprintln!("clawgrep: embedding {} total segments...", all_texts.len());
     }
 
     let text_refs: Vec<&str> = all_texts.iter().map(|s| s.as_str()).collect();
@@ -402,7 +462,7 @@ fn embed_files(
             })
             .collect();
 
-        debug!("cached {} ({} chunks)", path.display(), count);
+        debug!("cached {} ({} segments)", path.display(), count);
         entries.push(CacheEntry {
             path: path.to_string_lossy().into(),
             mtime_ms,

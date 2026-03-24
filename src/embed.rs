@@ -119,7 +119,7 @@ impl Embedder {
                 let result = self.embed_one(t);
                 let n = done.fetch_add(1, Ordering::Relaxed) + 1;
                 if verbose {
-                    eprintln!("clawgrep: embedded {}/{} chunks", n, total);
+                    eprintln!("clawgrep: embedded {}/{} segments", n, total);
                 }
                 result
             })

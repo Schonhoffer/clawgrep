@@ -34,7 +34,7 @@ Tests are organized by concern:
 - `tests/search.rs` — hybrid search with the embedding model
 - `tests/keyword.rs` — keyword search
 - `tests/cache.rs` — SQLite cache operations
-- `tests/chunking.rs` — text chunking
+- `tests/chunking.rs` — text segmentation
 - `tests/discovery.rs` — file discovery and ignore rules
 
 Shared helpers live in `tests/common/mod.rs`.

@@ -63,6 +63,7 @@ The cache is "just a cache" — disposable, never critical. The app must work co
 - Avoid large individual files. Keep files small so they can all easily fit in context windows.
 - It's better that the tests be slow and conclusive than fast and inconclusive.
 - Don't remove or skip tests as a method for getting the tests to pass.
+- Don't say anywhere the the comments of any markdowns that there is no network access required. There is to auto-download the model.
 
 ## Keep the README.md updated
 - Keep the README.md up-to-date. When changing any user-facing part of the code like allowed arguments, or configuration, update the README.md accordingly.
@@ -80,11 +81,15 @@ The cache is "just a cache" — disposable, never critical. The app must work co
 
 `dist/clawgrep/` contains an Agent Skills spec-compliant skill that teaches AI agents how to install and use clawgrep. It is distributed separately (e.g. via clawdhub, manual install, etc.) and is **not** loaded by agents working on this repo.
 
-Goals: tell an agent how to check if clawgrep is available, install it if missing, search a workspace effectively, and parse the grep-compatible output. Must not mention any specific agent product by name. Must work equally well in any AI coding harness.
+Goals: tell an agent how to check if clawgrep is available, install it if missing, search a workspace effectively, and parse the grep-compatible output. Must not mention any specific agent product by name. Must work equally well in any AI coding harness. But make sure it works great for OpenClaw without mentioning it by name.
 
 Structure follows progressive disclosure per the Agent Skills spec:
 1. Frontmatter (`name`, `description`) — loaded at startup for skill matching.
 2. SKILL.md body (<500 lines) — availability check, installation, basic usage, key flags, best practices.
 3. `references/` — full CLI reference and detailed input/output examples, loaded on demand.
 
-Keep the skill up to date when changing user-facing behavior: CLI flags, output format, exit codes, config file fields, or installation methods. The SKILL.md, `references/cli-reference.md`, and `references/examples.md` should reflect the current CLI.
+Keep the skill up to date when changing user-facing behavior: CLI flags, output format, exit codes, config file fields, or installation methods.
+
+The examples on the SKILL.md should focus on examples of searching markdown files in the memory/ folder.
+
+Follow "progressive loading" best practices by keeping SKILL.md light, but also make SKILL.md self contained so that most agents reading it would never need to consule the references. Include in the SKILL.md that the references are supplemental and really only needed if that agent encounters problems.

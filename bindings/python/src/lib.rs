@@ -142,10 +142,22 @@ fn search(
         .collect())
 }
 
+/// CLI entry point, callable as `clawgrep:main` from console_scripts.
+///
+/// Parses `sys.argv` and runs the full clawgrep CLI, returning the exit code.
+#[pyfunction]
+#[pyo3(name = "main")]
+fn cli_main(py: Python) -> PyResult<i32> {
+    let sys = py.import("sys")?;
+    let argv: Vec<String> = sys.getattr("argv")?.extract()?;
+    Ok(clawgrep::cli::run(argv))
+}
+
 /// clawgrep Python module.
 #[pymodule(name = "clawgrep")]
 fn clawgrep_mod(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(search, m)?)?;
+    m.add_function(wrap_pyfunction!(cli_main, m)?)?;
     m.add_class::<SearchResult>()?;
     Ok(())
 }

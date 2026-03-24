@@ -1,7 +1,7 @@
 {
   "name": "clawgrep",
   "version": "0.1.0",
-  "description": "Like grep with semantic search, for ai agents",
+  "description": "Grep-like CLI with hybrid semantic and keyword search",
   "main": "index.js",
   "types": "index.d.ts",
   "bin": {

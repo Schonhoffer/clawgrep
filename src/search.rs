@@ -23,7 +23,7 @@ use rayon::prelude::*;
 
 use crate::cache::CacheEntry;
 use crate::embed::{cosine_similarity, Embedder};
-use crate::index::{Index, CHUNK_LINES, CHUNK_OVERLAP};
+use crate::index::Index;
 use crate::keyword::keyword_search;
 
 /// A single search result.
@@ -88,11 +88,11 @@ pub fn hybrid_search(
 
     // 2. Semantic scoring: score every chunk from cached embeddings.
     let sem_scores = semantic_scores(&query_emb, &index.entries);
-    debug!("scored {} chunks semantically", sem_scores.len());
+    debug!("scored {} segments semantically", sem_scores.len());
 
     // 3. Keyword scoring: read files from disk and do substring/regex matching.
     let kw_hits = if opts.keyword_weight > 0.0 {
-        keyword_search(query, files, CHUNK_LINES, CHUNK_OVERLAP)
+        keyword_search(query, files)
     } else {
         vec![]
     };

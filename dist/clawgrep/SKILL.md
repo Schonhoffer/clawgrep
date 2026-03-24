@@ -1,8 +1,8 @@
 ---
 name: clawgrep
 description: >
-  Search files by meaning. Combines semantic embedding search
-  with keyword matching for high-quality code and document retrieval.
+  Grep-like CLI with hybrid semantic and keyword search.
+  Combines semantic embedding search with keyword matching for high-quality code and document retrieval.
   Use when searching for content where the exact wording is unknown,
   or when grep misses results across large codebases or folders.
   Useful for recursively searching large collections of markdown
@@ -44,19 +44,24 @@ Always pass `--no-color` when parsing output programmatically.
 ### Search a workspace
 
 ```bash
-clawgrep --no-color "database connection timeout" ./src
+clawgrep --no-color "previous discussion about auth flow" ./memory
 ```
 
 ### Output format
 
-Grep-compatible, one result per line:
+Grep-compatible, one result per line, ranked by relevance (best first):
 
 ```
-file:line:text
+$ clawgrep --no-color "previous discussion about auth flow" ./memory
+memory/2025-06-12-auth-design.md:8:Decided to use OAuth2 with PKCE for all client auth.
+memory/2025-06-12-auth-design.md:14:Token refresh should be transparent to the user.
+memory/2025-06-10-planning.md:3:Auth flow is the top priority for the sprint.
+memory/archive/2025-05-session-notes.md:42:Discussed moving auth to a separate service.
+memory/archive/2025-05-session-notes.md:87:Need to revisit token expiry policy.
 ```
 
-Results are ranked by relevance (best first). Context lines use `-` separator
-like grep (`file-line-text`).
+Each line is `file:line:text`. Context lines (from `-C`) use `-` as the
+separator instead: `file-line-text`.
 
 ### Exit codes
 
@@ -75,13 +80,13 @@ Default weights: 70% semantic, 30% keyword.
 **Concept search** (don't know exact wording):
 
 ```bash
-clawgrep --no-color "retry logic with exponential backoff" ./src
+clawgrep --no-color "decision about migration strategy" ./memory
 ```
 
-**Exact identifier search** (function names, error codes, serial numbers):
+**Exact identifier search** (note IDs, tags, serial numbers):
 
 ```bash
-clawgrep --no-color --keyword-weight 0.8 --semantic-weight 0.2 "handleUserAuth" ./src
+clawgrep --no-color --keyword-weight 0.8 --semantic-weight 0.2 "PROJ-1042" ./memory
 ```
 
 ## Key flags
@@ -106,10 +111,11 @@ See [CLI reference](references/cli-reference.md) for all flags.
 4. Let the cache persist — don't use `--no-cache` unless searching throwaway
    content. First run indexes; subsequent runs are fast.
 5. Search the narrowest relevant directory, not the whole filesystem.
-6. Pre-configure `~/.clawgrep.toml` so commands stay short. See
-   [configuration reference](references/cli-reference.md#configuration-file).
 
-## More information
+## References (advanced, usually not needed)
 
-- [CLI reference](references/cli-reference.md) — all flags, config file format, grep compatibility details
-- [Examples](references/examples.md) — input/output examples for common scenarios
+The information above should be sufficient for normal use. Only load these if
+you run into problems or need flags not listed above:
+
+- [CLI reference](references/cli-reference.md) — all flags, config file format, grep compatibility
+- [Examples](references/examples.md) — more input/output examples for edge cases

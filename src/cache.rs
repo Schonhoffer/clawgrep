@@ -52,7 +52,7 @@ const DB_FILE: &str = "cache.db";
 
 /// Bump this when changing the DB schema. The cache is disposable: if the
 /// app's version is newer than the DB's, we nuke all data and recreate.
-const SCHEMA_VERSION: u32 = 1;
+const SCHEMA_VERSION: u32 = 2;
 
 // ── Serialised types ────────────────────────────────────────────────────
 
@@ -261,7 +261,7 @@ pub fn get_entry(conn: &Connection, path: &str, model: &str) -> Result<Option<Ca
     let embeddings_blob: Vec<u8> = row.get(5)?;
 
     let chunks: Vec<ChunkBoundary> =
-        bincode::deserialize(&chunks_blob).context("deserializing chunk boundaries")?;
+        bincode::deserialize(&chunks_blob).context("deserializing segment boundaries")?;
     let embeddings = blob_to_f32(&embeddings_blob);
 
     Ok(Some(CacheEntry {
@@ -328,7 +328,7 @@ pub fn load_all_entries(conn: &Connection, model: &str) -> Result<Vec<CacheEntry
         let embeddings_blob: Vec<u8> = row.get(6)?;
 
         let chunks: Vec<ChunkBoundary> =
-            bincode::deserialize(&chunks_blob).context("deserializing chunk boundaries")?;
+            bincode::deserialize(&chunks_blob).context("deserializing segment boundaries")?;
         let embeddings = blob_to_f32(&embeddings_blob);
 
         entries.push(CacheEntry {

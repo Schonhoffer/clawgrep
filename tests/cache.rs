@@ -285,7 +285,7 @@ fn cache_schema_version_written_on_fresh_db() {
             row.get(0)
         })
         .unwrap();
-    assert_eq!(version, 1);
+    assert_eq!(version, 2);
 }
 
 #[test]
@@ -341,7 +341,7 @@ fn cache_wrong_schema_version_nukes_data() {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(version, 1);
+        assert_eq!(version, 2);
     }
 }
 

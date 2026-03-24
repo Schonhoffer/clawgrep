@@ -1,12 +1,16 @@
 ﻿# clawgrep
 
-AI grep for the terminal.
+Grep-like CLI with hybrid semantic and keyword search.
 
-Combines embedding-based semantic search with substring/regex keyword matching. Output is grep-compatible. Runs fully local with no API keys.
+Combines embedding-based semantic search with substring/regex keyword matching. Output is grep-compatible. Runs fully local.
+
+Semantic search is awesome for searching by the "meaning" which makes it very flexible, but can struggle with long non-semantic sequences like serial numbers. This utility uses both embedding space cosine similarity and keyword search, and returns a combined search result.
+
+The goal of making the input arguments and output format similar to grep is to make it easy to approach by pre-trained LLMs that generate the commands and interpreting results.
 
 ## Installation
 
-Even though `clawgrep` is primarily used as a CLI binary, it is distributed through language-specific package managers.
+Though `clawgrep` is primarily used as a CLI utility, it is distributed through language-specific package managers.
 
 ```bash
 cargo install clawgrep        # Rust/Cargo
@@ -70,16 +74,17 @@ clawgrep --show-score "database" ./src
 
 ## Output format
 
-```
-src/db.rs:42:let pool = ConnectionPool::new(config.timeout)
-src/db.rs:78:connection.reconnect_with_backoff()
-```
+Output follows the same `file:line:text` format as grep, one match per line:
 
-Format: `file:line:text`
+    docs/setup.md:12:Configure the database connection string in your environment
+    docs/troubleshooting.md:45:If the connection is refused, check firewall rules
+    docs/architecture.md:8:The connection pool manages up to 20 concurrent sessions
 
-When searching a single file or stdin, the filename prefix is omitted (like grep). With `--show-score`, a tab-separated score is appended: `file:line:text\t(0.847)`.
+Results are sorted by relevance score (highest first), not by file position. This differs from grep, which prints matches in file order.
 
-Context lines use `-` as separator (like grep): `file-line-text`.
+When searching a single file or stdin, the filename prefix is omitted, matching grep behavior. Context lines (from `-A`, `-B`, `-C`) use `-` as their separator instead of `:`, also matching grep: `file-line-text`.
+
+With `--show-score`, a tab-separated relevance score is appended to each line: `file:line:text\t(0.847)`. This is the only output variation that departs from grep format.
 
 ## Exit codes
 
@@ -94,12 +99,11 @@ These match grep conventions.
 ## How it works
 
 1. **Discover** files recursively, respecting `.gitignore` and `.clawgrepignore`.
-2. **Chunk** files into overlapping ~20-line blocks for better embedding quality.
-3. **Embed** each chunk with a local ONNX model (BAAI/bge-small-en-v1.5, 384d) using tract (pure-Rust inference). Model weights (~65 MB) are downloaded on first use into the `models/` subdirectory of the cache directory.
-4. **Cache** embeddings and model weights in a platform-specific cache directory (or `--cache-dir`). The SQLite database and downloaded model files share the same directory. WAL mode allows concurrent readers and serialised writers; optimistic concurrency ensures newer embeddings always win.
-5. **Checkpoint** every 25 files during indexing, so interrupted runs resume from roughly where they stopped.
-6. **Keyword search** reads files from disk and does substring matching, regex matching, and basic stemming. This runs independently of embeddings and finds exact strings like barcodes, serial numbers, and error codes.
-7. **Rank** by combining scores: `score = semantic_weight * cosine(query, chunk) + keyword_weight * keyword_match(query, chunk)`. Results are sorted by combined score and truncated to top-k.
+2. **Index** files by splitting them into overlapping segments sized by estimated token count (~100 tokens, matching the embedding model's budget). Prefers splitting at natural boundaries (blank lines, section headers) when they fall near the target size; a hard cap of 20 lines per chunk keeps results granular for token-sparse content like code. Embeddings are computed with a local ONNX model (BAAI/bge-small-en-v1.5, 384d) using tract (pure-Rust inference). Model weights (~65 MB) are downloaded on first use into the `models/` subdirectory of the cache directory.
+3. **Cache** embeddings and model weights in a platform-specific cache directory (or `--cache-dir`). The SQLite database and downloaded model files share the same directory. WAL mode allows concurrent readers and serialised writers; optimistic concurrency ensures newer embeddings always win.
+4. **Checkpoint** every 25 files during indexing, so interrupted runs resume from roughly where they stopped.
+5. **Keyword search** reads files from disk and does substring matching, regex matching, and basic stemming. This runs independently of embeddings and finds exact strings like barcodes, serial numbers, and error codes.
+6. **Rank** by combining scores: `score = semantic_weight * cosine(query, segment) + keyword_weight * keyword_match(query, segment)`. Results are sorted by combined score and truncated to top-k.
 
 Subsequent searches reuse cached embeddings. Only changed files are re-embedded. Multiple clawgrep processes can share the same cache without corruption.
 
@@ -257,7 +261,7 @@ cargo build --release
 
 Tests are organized by concern:
 - `tests/discovery.rs` — file discovery and ignore rules
-- `tests/chunking.rs` — text chunking
+- `tests/chunking.rs` — text segmentation
 - `tests/cache.rs` — SQLite cache operations
 - `tests/keyword.rs` — keyword search (substring, regex, stemming)
 - `tests/search.rs` — hybrid search with the embedding model

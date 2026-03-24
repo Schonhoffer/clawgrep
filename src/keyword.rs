@@ -11,11 +11,12 @@
 //!
 //! The scores are normalised to [0, 1].
 
-use std::fs;
 use std::path::PathBuf;
 
 use rayon::prelude::*;
 use regex::RegexBuilder;
+
+use crate::index::chunk_file;
 
 /// A keyword match result for one chunk of one file.
 #[derive(Debug, Clone)]
@@ -35,13 +36,10 @@ const REGEX_WEIGHT: f32 = 0.9;
 const WORD_WEIGHT: f32 = 0.6;
 
 /// Run keyword search over the given files, reading them from disk.
+/// Uses the same chunking logic as the embedding index so that chunk
+/// boundaries align for score combination.
 /// Returns hits sorted by score descending.
-pub fn keyword_search(
-    query: &str,
-    files: &[PathBuf],
-    chunk_lines: usize,
-    chunk_overlap: usize,
-) -> Vec<KeywordHit> {
+pub fn keyword_search(query: &str, files: &[PathBuf]) -> Vec<KeywordHit> {
     let query_lower = query.to_lowercase();
     let query_words = split_words(&query_lower);
     let stemmed_query: Vec<String> = query_words.iter().map(|w| stem(w)).collect();
@@ -52,19 +50,14 @@ pub fn keyword_search(
     let hits: Vec<Vec<KeywordHit>> = files
         .par_iter()
         .filter_map(|path| {
-            let content = fs::read_to_string(path).ok()?;
-            let lines: Vec<&str> = content.lines().collect();
-            if lines.is_empty() {
+            let chunks = chunk_file(path).ok()?;
+            if chunks.is_empty() {
                 return None;
             }
             let mut file_hits = Vec::new();
-            let step = chunk_lines.saturating_sub(chunk_overlap).max(1);
-            let mut start = 0;
-            while start < lines.len() {
-                let end = (start + chunk_lines).min(lines.len());
-                let chunk_text = lines[start..end].join("\n");
+            for chunk in &chunks {
                 let score = score_chunk(
-                    &chunk_text,
+                    &chunk.text,
                     &query_lower,
                     &query_words,
                     &stemmed_query,
@@ -73,15 +66,11 @@ pub fn keyword_search(
                 if score > 0.0 {
                     file_hits.push(KeywordHit {
                         file: path.clone(),
-                        start_line: start + 1,
-                        end_line: end,
-                        text: chunk_text,
+                        start_line: chunk.start_line,
+                        end_line: chunk.end_line,
+                        text: chunk.text.clone(),
                         score,
                     });
-                }
-                start += step;
-                if end == lines.len() {
-                    break;
                 }
             }
             Some(file_hits)
