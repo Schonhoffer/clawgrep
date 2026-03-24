@@ -1,6 +1,6 @@
 {
   "name": "clawgrep",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Grep-like CLI with hybrid semantic and keyword search",
   "main": "index.js",
   "types": "index.d.ts",
@@ -37,10 +37,10 @@
     "version": "napi version"
   },
   "optionalDependencies": {
-    "clawgrep-win32-x64-msvc": "0.1.0",
-    "clawgrep-darwin-x64": "0.1.0",
-    "clawgrep-linux-x64-gnu": "0.1.0",
-    "clawgrep-darwin-arm64": "0.1.0",
-    "clawgrep-linux-arm64-gnu": "0.1.0"
+    "clawgrep-win32-x64-msvc": "0.1.1",
+    "clawgrep-darwin-x64": "0.1.1",
+    "clawgrep-linux-x64-gnu": "0.1.1",
+    "clawgrep-darwin-arm64": "0.1.1",
+    "clawgrep-linux-arm64-gnu": "0.1.1"
   }
 }
