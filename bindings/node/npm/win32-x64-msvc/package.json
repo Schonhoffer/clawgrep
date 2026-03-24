@@ -1,10 +1,17 @@
 {
   "name": "clawgrep-win32-x64-msvc",
-  "version": "0.0.0",
-  "os": ["win32"],
-  "cpu": ["x64"],
+  "version": "0.1.0",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
   "main": "clawgrep.win32-x64-msvc.node",
-  "files": ["clawgrep.win32-x64-msvc.node", "clawgrep.exe"],
+  "files": [
+    "clawgrep.win32-x64-msvc.node",
+    "clawgrep.exe"
+  ],
   "description": "clawgrep native binding - win32 x64 msvc",
   "license": "(MIT OR Apache-2.0)",
   "engines": {

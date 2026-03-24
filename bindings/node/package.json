@@ -35,5 +35,12 @@
     "build": "napi build --platform --release",
     "prepublishOnly": "napi prepublish -t npm --skip-gh-release",
     "version": "napi version"
+  },
+  "optionalDependencies": {
+    "clawgrep-win32-x64-msvc": "0.1.0",
+    "clawgrep-darwin-x64": "0.1.0",
+    "clawgrep-linux-x64-gnu": "0.1.0",
+    "clawgrep-darwin-arm64": "0.1.0",
+    "clawgrep-linux-arm64-gnu": "0.1.0"
   }
 }

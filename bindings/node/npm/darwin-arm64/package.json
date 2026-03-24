@@ -1,10 +1,17 @@
 {
   "name": "clawgrep-darwin-arm64",
-  "version": "0.0.0",
-  "os": ["darwin"],
-  "cpu": ["arm64"],
+  "version": "0.1.0",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
   "main": "clawgrep.darwin-arm64.node",
-  "files": ["clawgrep.darwin-arm64.node", "clawgrep"],
+  "files": [
+    "clawgrep.darwin-arm64.node",
+    "clawgrep"
+  ],
   "description": "clawgrep native binding - darwin arm64",
   "license": "(MIT OR Apache-2.0)",
   "engines": {

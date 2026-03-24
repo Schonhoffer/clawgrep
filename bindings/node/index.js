@@ -14,11 +14,12 @@ let localFileExisted = false
 let loadError = null
 
 function isMusl() {
+  // For Node 10
   if (!process.report || typeof process.report.getReport !== 'function') {
     try {
       const lddPath = require('child_process').execSync('which ldd').toString().trim()
       return readFileSync(lddPath, 'utf8').includes('musl')
-    } catch {
+    } catch (e) {
       return true
     }
   } else {
@@ -28,7 +29,94 @@ function isMusl() {
 }
 
 switch (platform) {
+  case 'android':
+    switch (arch) {
+      case 'arm64':
+        localFileExisted = existsSync(join(__dirname, 'clawgrep.android-arm64.node'))
+        try {
+          if (localFileExisted) {
+            nativeBinding = require('./clawgrep.android-arm64.node')
+          } else {
+            nativeBinding = require('clawgrep-android-arm64')
+          }
+        } catch (e) {
+          loadError = e
+        }
+        break
+      case 'arm':
+        localFileExisted = existsSync(join(__dirname, 'clawgrep.android-arm-eabi.node'))
+        try {
+          if (localFileExisted) {
+            nativeBinding = require('./clawgrep.android-arm-eabi.node')
+          } else {
+            nativeBinding = require('clawgrep-android-arm-eabi')
+          }
+        } catch (e) {
+          loadError = e
+        }
+        break
+      default:
+        throw new Error(`Unsupported architecture on Android ${arch}`)
+    }
+    break
+  case 'win32':
+    switch (arch) {
+      case 'x64':
+        localFileExisted = existsSync(
+          join(__dirname, 'clawgrep.win32-x64-msvc.node')
+        )
+        try {
+          if (localFileExisted) {
+            nativeBinding = require('./clawgrep.win32-x64-msvc.node')
+          } else {
+            nativeBinding = require('clawgrep-win32-x64-msvc')
+          }
+        } catch (e) {
+          loadError = e
+        }
+        break
+      case 'ia32':
+        localFileExisted = existsSync(
+          join(__dirname, 'clawgrep.win32-ia32-msvc.node')
+        )
+        try {
+          if (localFileExisted) {
+            nativeBinding = require('./clawgrep.win32-ia32-msvc.node')
+          } else {
+            nativeBinding = require('clawgrep-win32-ia32-msvc')
+          }
+        } catch (e) {
+          loadError = e
+        }
+        break
+      case 'arm64':
+        localFileExisted = existsSync(
+          join(__dirname, 'clawgrep.win32-arm64-msvc.node')
+        )
+        try {
+          if (localFileExisted) {
+            nativeBinding = require('./clawgrep.win32-arm64-msvc.node')
+          } else {
+            nativeBinding = require('clawgrep-win32-arm64-msvc')
+          }
+        } catch (e) {
+          loadError = e
+        }
+        break
+      default:
+        throw new Error(`Unsupported architecture on Windows: ${arch}`)
+    }
+    break
   case 'darwin':
+    localFileExisted = existsSync(join(__dirname, 'clawgrep.darwin-universal.node'))
+    try {
+      if (localFileExisted) {
+        nativeBinding = require('./clawgrep.darwin-universal.node')
+      } else {
+        nativeBinding = require('clawgrep-darwin-universal')
+      }
+      break
+    } catch {}
     switch (arch) {
       case 'x64':
         localFileExisted = existsSync(join(__dirname, 'clawgrep.darwin-x64.node'))
@@ -43,7 +131,9 @@ switch (platform) {
         }
         break
       case 'arm64':
-        localFileExisted = existsSync(join(__dirname, 'clawgrep.darwin-arm64.node'))
+        localFileExisted = existsSync(
+          join(__dirname, 'clawgrep.darwin-arm64.node')
+        )
         try {
           if (localFileExisted) {
             nativeBinding = require('./clawgrep.darwin-arm64.node')
@@ -58,33 +148,41 @@ switch (platform) {
         throw new Error(`Unsupported architecture on macOS: ${arch}`)
     }
     break
-  case 'win32':
-    switch (arch) {
-      case 'x64':
-        localFileExisted = existsSync(join(__dirname, 'clawgrep.win32-x64-msvc.node'))
-        try {
-          if (localFileExisted) {
-            nativeBinding = require('./clawgrep.win32-x64-msvc.node')
-          } else {
-            nativeBinding = require('clawgrep-win32-x64-msvc')
-          }
-        } catch (e) {
-          loadError = e
-        }
-        break
-      default:
-        throw new Error(`Unsupported architecture on Windows: ${arch}`)
+  case 'freebsd':
+    if (arch !== 'x64') {
+      throw new Error(`Unsupported architecture on FreeBSD: ${arch}`)
+    }
+    localFileExisted = existsSync(join(__dirname, 'clawgrep.freebsd-x64.node'))
+    try {
+      if (localFileExisted) {
+        nativeBinding = require('./clawgrep.freebsd-x64.node')
+      } else {
+        nativeBinding = require('clawgrep-freebsd-x64')
+      }
+    } catch (e) {
+      loadError = e
     }
     break
   case 'linux':
     switch (arch) {
       case 'x64':
         if (isMusl()) {
-          throw new Error(
-            'Unsupported libc: musl is not supported on x64. Use a glibc-based Linux distribution.',
+          localFileExisted = existsSync(
+            join(__dirname, 'clawgrep.linux-x64-musl.node')
           )
+          try {
+            if (localFileExisted) {
+              nativeBinding = require('./clawgrep.linux-x64-musl.node')
+            } else {
+              nativeBinding = require('clawgrep-linux-x64-musl')
+            }
+          } catch (e) {
+            loadError = e
+          }
         } else {
-          localFileExisted = existsSync(join(__dirname, 'clawgrep.linux-x64-gnu.node'))
+          localFileExisted = existsSync(
+            join(__dirname, 'clawgrep.linux-x64-gnu.node')
+          )
           try {
             if (localFileExisted) {
               nativeBinding = require('./clawgrep.linux-x64-gnu.node')
@@ -98,11 +196,22 @@ switch (platform) {
         break
       case 'arm64':
         if (isMusl()) {
-          throw new Error(
-            'Unsupported libc: musl is not supported on arm64. Use a glibc-based Linux distribution.',
+          localFileExisted = existsSync(
+            join(__dirname, 'clawgrep.linux-arm64-musl.node')
           )
+          try {
+            if (localFileExisted) {
+              nativeBinding = require('./clawgrep.linux-arm64-musl.node')
+            } else {
+              nativeBinding = require('clawgrep-linux-arm64-musl')
+            }
+          } catch (e) {
+            loadError = e
+          }
         } else {
-          localFileExisted = existsSync(join(__dirname, 'clawgrep.linux-arm64-gnu.node'))
+          localFileExisted = existsSync(
+            join(__dirname, 'clawgrep.linux-arm64-gnu.node')
+          )
           try {
             if (localFileExisted) {
               nativeBinding = require('./clawgrep.linux-arm64-gnu.node')
@@ -112,6 +221,78 @@ switch (platform) {
           } catch (e) {
             loadError = e
           }
+        }
+        break
+      case 'arm':
+        if (isMusl()) {
+          localFileExisted = existsSync(
+            join(__dirname, 'clawgrep.linux-arm-musleabihf.node')
+          )
+          try {
+            if (localFileExisted) {
+              nativeBinding = require('./clawgrep.linux-arm-musleabihf.node')
+            } else {
+              nativeBinding = require('clawgrep-linux-arm-musleabihf')
+            }
+          } catch (e) {
+            loadError = e
+          }
+        } else {
+          localFileExisted = existsSync(
+            join(__dirname, 'clawgrep.linux-arm-gnueabihf.node')
+          )
+          try {
+            if (localFileExisted) {
+              nativeBinding = require('./clawgrep.linux-arm-gnueabihf.node')
+            } else {
+              nativeBinding = require('clawgrep-linux-arm-gnueabihf')
+            }
+          } catch (e) {
+            loadError = e
+          }
+        }
+        break
+      case 'riscv64':
+        if (isMusl()) {
+          localFileExisted = existsSync(
+            join(__dirname, 'clawgrep.linux-riscv64-musl.node')
+          )
+          try {
+            if (localFileExisted) {
+              nativeBinding = require('./clawgrep.linux-riscv64-musl.node')
+            } else {
+              nativeBinding = require('clawgrep-linux-riscv64-musl')
+            }
+          } catch (e) {
+            loadError = e
+          }
+        } else {
+          localFileExisted = existsSync(
+            join(__dirname, 'clawgrep.linux-riscv64-gnu.node')
+          )
+          try {
+            if (localFileExisted) {
+              nativeBinding = require('./clawgrep.linux-riscv64-gnu.node')
+            } else {
+              nativeBinding = require('clawgrep-linux-riscv64-gnu')
+            }
+          } catch (e) {
+            loadError = e
+          }
+        }
+        break
+      case 's390x':
+        localFileExisted = existsSync(
+          join(__dirname, 'clawgrep.linux-s390x-gnu.node')
+        )
+        try {
+          if (localFileExisted) {
+            nativeBinding = require('./clawgrep.linux-s390x-gnu.node')
+          } else {
+            nativeBinding = require('clawgrep-linux-s390x-gnu')
+          }
+        } catch (e) {
+          loadError = e
         }
         break
       default:
@@ -126,7 +307,7 @@ if (!nativeBinding) {
   if (loadError) {
     throw loadError
   }
-  throw new Error('Failed to load native binding')
+  throw new Error(`Failed to load native binding`)
 }
 
 const { search } = nativeBinding

@@ -1,11 +1,20 @@
 {
   "name": "clawgrep-linux-x64-gnu",
-  "version": "0.0.0",
-  "os": ["linux"],
-  "cpu": ["x64"],
-  "libc": ["glibc"],
+  "version": "0.1.0",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "libc": [
+    "glibc"
+  ],
   "main": "clawgrep.linux-x64-gnu.node",
-  "files": ["clawgrep.linux-x64-gnu.node", "clawgrep"],
+  "files": [
+    "clawgrep.linux-x64-gnu.node",
+    "clawgrep"
+  ],
   "description": "clawgrep native binding - linux x64 gnu",
   "license": "(MIT OR Apache-2.0)",
   "engines": {
