@@ -1,5 +1,5 @@
 {
-  "name": "clawgrep-win32-x64-msvc",
+  "name": "@clawgrep/clawgrep-win32-x64-msvc",
   "version": "0.1.1",
   "os": [
     "win32"
@@ -14,6 +14,9 @@
   ],
   "description": "clawgrep native binding - win32 x64 msvc",
   "license": "(MIT OR Apache-2.0)",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">= 10"
   }

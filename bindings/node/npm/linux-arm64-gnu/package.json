@@ -1,5 +1,5 @@
 {
-  "name": "clawgrep-linux-arm64-gnu",
+  "name": "@clawgrep/clawgrep-linux-arm64-gnu",
   "version": "0.1.1",
   "os": [
     "linux"
@@ -17,6 +17,9 @@
   ],
   "description": "clawgrep native binding - linux arm64 gnu",
   "license": "(MIT OR Apache-2.0)",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">= 10"
   }
