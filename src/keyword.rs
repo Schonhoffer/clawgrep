@@ -15,8 +15,15 @@ use std::path::PathBuf;
 
 use rayon::prelude::*;
 use regex::RegexBuilder;
+use unicode_normalization::UnicodeNormalization;
 
 use crate::index::chunk_file;
+
+/// Normalize text to NFC form so that precomposed and decomposed
+/// characters (e.g. é vs e+combining-acute) compare equal.
+fn normalize(text: &str) -> String {
+    text.nfc().collect()
+}
 
 /// A keyword match result for one chunk of one file.
 #[derive(Debug, Clone)]
@@ -40,7 +47,7 @@ const WORD_WEIGHT: f32 = 0.6;
 /// boundaries align for score combination.
 /// Returns hits sorted by score descending.
 pub fn keyword_search(query: &str, files: &[PathBuf]) -> Vec<KeywordHit> {
-    let query_lower = query.to_lowercase();
+    let query_lower = normalize(&query.to_lowercase());
     let query_words = split_words(&query_lower);
     let stemmed_query: Vec<String> = query_words.iter().map(|w| stem(w)).collect();
 
@@ -94,7 +101,7 @@ fn score_chunk(
     stemmed_query: &[String],
     query_regex: &Option<regex::Regex>,
 ) -> f32 {
-    let chunk_lower = chunk_text.to_lowercase();
+    let chunk_lower = normalize(&chunk_text.to_lowercase());
 
     // 1. Exact substring match (case-insensitive).
     if !query_lower.is_empty() && chunk_lower.contains(query_lower) {
@@ -134,11 +141,12 @@ fn score_chunk(
     WORD_WEIGHT * fraction
 }
 
-/// Split text into lowercase words on whitespace and punctuation,
-/// keeping hyphens, underscores, and dots within words (for barcodes,
-/// serial numbers, etc.).
+/// Split text into words on whitespace and punctuation (including
+/// Unicode punctuation like CJK commas and fullwidth symbols).
+/// Keeps hyphens, underscores, and dots within words for barcodes,
+/// serial numbers, etc.
 fn split_words(text: &str) -> Vec<String> {
-    text.split(|c: char| c.is_whitespace() || ",:;!?\"'()[]{}|<>".contains(c))
+    text.split(|c: char| !c.is_alphanumeric() && !"-_.".contains(c))
         .filter(|w| !w.is_empty())
         .map(|w| w.to_string())
         .collect()
@@ -147,8 +155,13 @@ fn split_words(text: &str) -> Vec<String> {
 /// Very simple suffix-stripping stemmer.  Handles common English suffixes
 /// to allow "connecting" to match "connection", "errors" to match "error",
 /// etc.  Not trying to be a full Porter stemmer — just enough to be useful.
+/// Only applied to ASCII words to avoid mangling non-English text.
 fn stem(word: &str) -> String {
     let w = word.to_lowercase();
+    // Skip stemming for non-ASCII words (CJK, Cyrillic, Arabic, etc.)
+    if !w.bytes().all(|b| b.is_ascii_alphabetic()) {
+        return w;
+    }
     // Order matters: try longest suffixes first.
     for suffix in &[
         "ation", "tion", "sion", "ment", "ness", "ence", "ance", "ible", "able", "ing", "ied",
@@ -249,5 +262,77 @@ mod tests {
             &re,
         );
         assert!((score - REGEX_WEIGHT).abs() < 1e-6);
+    }
+
+    #[test]
+    fn split_words_cjk_punctuation() {
+        // CJK ideographic comma and period should split words.
+        let words = split_words("数据库、连接。失败");
+        assert_eq!(words, vec!["数据库", "连接", "失败"]);
+    }
+
+    #[test]
+    fn split_words_fullwidth_punctuation() {
+        let words = split_words("エラー，接続");
+        assert_eq!(words, vec!["エラー", "接続"]);
+    }
+
+    #[test]
+    fn stem_skips_non_ascii() {
+        // Non-ASCII words should pass through unchanged.
+        assert_eq!(stem("соединение"), "соединение");
+        assert_eq!(stem("接続"), "接続");
+        assert_eq!(stem("connexion"), "connexion");
+    }
+
+    #[test]
+    fn stem_still_works_for_english() {
+        assert_eq!(stem("connecting"), "connect");
+        assert_eq!(stem("deployment"), "deploy");
+    }
+
+    #[test]
+    fn nfc_normalization_matches() {
+        // Precomposed é (U+00E9) vs decomposed e + combining acute (U+0065 U+0301)
+        let precomposed = "caf\u{00e9}";
+        let decomposed = "cafe\u{0301}";
+        let query_lower = normalize(&precomposed.to_lowercase());
+        let query_words = split_words(&query_lower);
+        let stemmed = query_words.iter().map(|w| stem(w)).collect::<Vec<_>>();
+        let score = score_chunk(decomposed, &query_lower, &query_words, &stemmed, &None);
+        assert!(
+            score > 0.9,
+            "precomposed and decomposed should match, got {score}"
+        );
+    }
+
+    #[test]
+    fn cyrillic_exact_match() {
+        let query_lower = normalize(&"база данных".to_lowercase());
+        let query_words = split_words(&query_lower);
+        let stemmed = query_words.iter().map(|w| stem(w)).collect::<Vec<_>>();
+        let score = score_chunk(
+            "Ошибка: база данных недоступна",
+            &query_lower,
+            &query_words,
+            &stemmed,
+            &None,
+        );
+        assert!(score > 0.9, "Cyrillic exact substring should match");
+    }
+
+    #[test]
+    fn cjk_word_match() {
+        let query_lower = normalize(&"数据库".to_lowercase());
+        let query_words = split_words(&query_lower);
+        let stemmed = query_words.iter().map(|w| stem(w)).collect::<Vec<_>>();
+        let score = score_chunk(
+            "数据库连接失败",
+            &query_lower,
+            &query_words,
+            &stemmed,
+            &None,
+        );
+        assert!(score > 0.0, "CJK substring should match");
     }
 }

@@ -121,3 +121,76 @@ fn keyword_empty_query() {
     // Empty query should not crash; may or may not return results
     let _ = hits;
 }
+
+#[test]
+fn keyword_cjk_exact_match() {
+    let dir = TempDir::new().unwrap();
+    fs::write(
+        dir.path().join("zh.txt"),
+        "数据库连接失败\n服务器已启动\n",
+    )
+    .unwrap();
+    let files = vec![dir.path().join("zh.txt")];
+    let hits = keyword_search("数据库", &files);
+    assert!(!hits.is_empty(), "should find CJK substring");
+    assert!(hits[0].score > 0.0);
+}
+
+#[test]
+fn keyword_cyrillic_case_insensitive() {
+    let dir = TempDir::new().unwrap();
+    fs::write(
+        dir.path().join("ru.txt"),
+        "Ошибка подключения к базе данных\n",
+    )
+    .unwrap();
+    let files = vec![dir.path().join("ru.txt")];
+    let hits = keyword_search("ошибка подключения", &files);
+    assert!(!hits.is_empty(), "should match Cyrillic case-insensitively");
+    assert!(hits[0].score > 0.9);
+}
+
+#[test]
+fn keyword_nfc_normalization() {
+    let dir = TempDir::new().unwrap();
+    // Write text with decomposed é (e + combining acute)
+    fs::write(
+        dir.path().join("fr.txt"),
+        "Le caf\u{0065}\u{0301} est ferm\u{0065}\u{0301}\n",
+    )
+    .unwrap();
+    let files = vec![dir.path().join("fr.txt")];
+    // Search with precomposed é
+    let hits = keyword_search("caf\u{00e9}", &files);
+    assert!(
+        !hits.is_empty(),
+        "precomposed query should match decomposed text"
+    );
+}
+
+#[test]
+fn keyword_cjk_punctuation_splitting() {
+    let dir = TempDir::new().unwrap();
+    fs::write(
+        dir.path().join("jp.txt"),
+        "エラー、接続、データベース\n",
+    )
+    .unwrap();
+    let files = vec![dir.path().join("jp.txt")];
+    let hits = keyword_search("接続", &files);
+    assert!(!hits.is_empty(), "should find word split on CJK punctuation");
+}
+
+#[test]
+fn keyword_stemming_doesnt_mangle_non_english() {
+    let dir = TempDir::new().unwrap();
+    fs::write(
+        dir.path().join("mixed.txt"),
+        "The connexion to соединение was established\n",
+    )
+    .unwrap();
+    let files = vec![dir.path().join("mixed.txt")];
+    // "connexion" should match as exact substring, not get mangled by stemmer
+    let hits = keyword_search("connexion", &files);
+    assert!(!hits.is_empty());
+}

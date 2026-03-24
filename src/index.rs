@@ -139,11 +139,13 @@ pub fn chunk_file(path: &Path) -> Result<Vec<TextChunk>> {
 }
 
 /// Rough token count for a line (~4 chars per token for BERT tokenizers).
+/// Uses char count, not byte length, so CJK/Cyrillic/Arabic text is
+/// estimated correctly (1 char ≈ 1 BERT token across scripts).
 fn estimate_tokens(line: &str) -> usize {
     if line.is_empty() {
         return 0;
     }
-    (line.len() / 4).max(1)
+    (line.chars().count() / 4).max(1)
 }
 
 /// A blank line or markdown header — natural places to split chunks.

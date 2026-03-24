@@ -68,6 +68,49 @@ fn unicode_file_content() {
     fs::write(&file, "\u{65E5}\u{672C}\u{8A9E}\n\u{4E2D}\u{6587}\n").unwrap();
     let chunks = chunk_file(&file).unwrap();
     assert_eq!(chunks.len(), 1);
+    assert!(chunks[0].text.contains("\u{65E5}\u{672C}\u{8A9E}"));
+}
+
+#[test]
+fn cjk_dense_text_chunks_reasonably() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("cjk.txt");
+    // Create dense CJK text: 30 lines of ~80 CJK chars each.
+    // With char-based token estimation, each line ≈ 20 tokens,
+    // so ~5 lines should reach the token limit.
+    let mut content = String::new();
+    for _ in 0..30 {
+        for _ in 0..80 {
+            content.push('漢');
+        }
+        content.push('\n');
+    }
+    fs::write(&file, &content).unwrap();
+    let chunks = chunk_file(&file).unwrap();
+    assert!(
+        chunks.len() >= 2,
+        "dense CJK text should produce multiple chunks, got {}",
+        chunks.len()
+    );
+}
+
+#[test]
+fn cyrillic_text_chunks() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("cyrillic.txt");
+    let mut content = String::new();
+    for i in 0..30 {
+        content.push_str(&format!(
+            "Строка номер {i} содержит текст на русском языке для тестирования работы системы\n"
+        ));
+    }
+    fs::write(&file, &content).unwrap();
+    let chunks = chunk_file(&file).unwrap();
+    assert!(
+        chunks.len() >= 2,
+        "30 lines of Cyrillic should produce multiple chunks, got {}",
+        chunks.len()
+    );
 }
 
 #[test]

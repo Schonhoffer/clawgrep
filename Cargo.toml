@@ -34,6 +34,7 @@ tokenizers = { version = "0.22.2", default-features = false, features = ["fancy-
 hf-hub = { version = "0.5.0", default-features = false, features = ["rustls-tls", "ureq"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 regex = "1"
+unicode-normalization = "0.1"
 
 [dev-dependencies]
 tempfile = "3"

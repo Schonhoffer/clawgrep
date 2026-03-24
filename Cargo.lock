@@ -297,6 +297,7 @@ dependencies = [
  "tokenizers",
  "toml",
  "tract-onnx",
+ "unicode-normalization",
 ]
 
 [[package]]

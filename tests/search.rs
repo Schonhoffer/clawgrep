@@ -553,3 +553,92 @@ fn search_opts_default_weights() {
     assert!((opts.semantic_weight - 0.7).abs() < 1e-6);
     assert!((opts.keyword_weight - 0.3).abs() < 1e-6);
 }
+
+// ── Non-English / Unicode ──────────────────────────────────────────────
+
+#[test]
+fn model_embed_cjk_text() {
+    let embedder = shared_embedder();
+    let vec = embedder.embed_one("数据库连接失败").unwrap();
+    assert_eq!(vec.len(), DEFAULT_DIM);
+    // Should produce a non-zero embedding.
+    assert!(vec.iter().any(|&v| v.abs() > 1e-6));
+}
+
+#[test]
+fn model_embed_cyrillic_text() {
+    let embedder = shared_embedder();
+    let vec = embedder.embed_one("база данных недоступна").unwrap();
+    assert_eq!(vec.len(), DEFAULT_DIM);
+    assert!(vec.iter().any(|&v| v.abs() > 1e-6));
+}
+
+#[test]
+fn model_embed_arabic_text() {
+    let embedder = shared_embedder();
+    let vec = embedder.embed_one("اتصال قاعدة البيانات فشل").unwrap();
+    assert_eq!(vec.len(), DEFAULT_DIM);
+    assert!(vec.iter().any(|&v| v.abs() > 1e-6));
+}
+
+#[test]
+fn model_similar_cjk_texts_score_high() {
+    let embedder = shared_embedder();
+    let v1 = embedder.embed_one("数据库连接失败").unwrap();
+    let v2 = embedder.embed_one("无法连接到数据库").unwrap();
+    let v3 = embedder.embed_one("今天天气很好").unwrap();
+    assert!(
+        cosine_similarity(&v1, &v2) > cosine_similarity(&v1, &v3),
+        "similar CJK texts should score higher than unrelated"
+    );
+}
+
+#[test]
+fn model_hybrid_search_cjk_content() {
+    let dir = TempDir::new().unwrap();
+    fs::write(
+        dir.path().join("zh.md"),
+        "# 系统日志\n\n数据库连接失败，请检查配置。\n\n服务器已成功启动。\n",
+    )
+    .unwrap();
+    let files = discover_files(dir.path(), &test_discover_opts());
+    let embedder = shared_embedder();
+    let index = build_index(&files, &embedder, &test_index_opts()).unwrap();
+    let results = hybrid_search(
+        "数据库",
+        &index,
+        &files,
+        &embedder,
+        &SearchOpts {
+            top_k: 5,
+            ..SearchOpts::default()
+        },
+    )
+    .unwrap();
+    assert!(!results.is_empty(), "should find CJK content");
+}
+
+#[test]
+fn model_hybrid_search_cyrillic_content() {
+    let dir = TempDir::new().unwrap();
+    fs::write(
+        dir.path().join("ru.md"),
+        "# Журнал ошибок\n\nОшибка подключения к базе данных.\n\nСервер запущен успешно.\n",
+    )
+    .unwrap();
+    let files = discover_files(dir.path(), &test_discover_opts());
+    let embedder = shared_embedder();
+    let index = build_index(&files, &embedder, &test_index_opts()).unwrap();
+    let results = hybrid_search(
+        "ошибка базы данных",
+        &index,
+        &files,
+        &embedder,
+        &SearchOpts {
+            top_k: 5,
+            ..SearchOpts::default()
+        },
+    )
+    .unwrap();
+    assert!(!results.is_empty(), "should find Cyrillic content");
+}
