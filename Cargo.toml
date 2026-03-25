@@ -3,7 +3,7 @@ members = [".", "bindings/node", "bindings/python"]
 
 [package]
 name = "clawgrep"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "Grep-like CLI with hybrid semantic and keyword search."
 license = "MIT OR Apache-2.0"
