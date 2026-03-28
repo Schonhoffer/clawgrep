@@ -48,8 +48,9 @@ Key differences from grep:
 
 - Results are ranked by relevance, not printed in file order.
 - Default is semantic + keyword hybrid search, not regex matching.
-- First run on a directory builds an embedding index (takes a few seconds).
-  Subsequent runs reuse the cache and are fast.
+- First run downloads a small ONNX embedding model (~30 MB) from Hugging Face
+  and builds an embedding index (takes a few seconds). Subsequent runs reuse
+  the cached model and embeddings and are fully offline.
 - Model weights and embedding cache share the same directory. The default
   location is platform-specific: `~/.cache/clawgrep/` on Linux,
   `~/Library/Caches/clawgrep/` on macOS, `AppData\Local\clawgrep\` on Windows.

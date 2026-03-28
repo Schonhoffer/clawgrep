@@ -1,0 +1,88 @@
+name: Build Windows ARM64
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build (aarch64-pc-windows-msvc)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-pc-windows-msvc
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: aarch64-pc-windows-msvc
+
+      # ── CLI binary ──────────────────────────────────────────────────
+
+      - name: Build CLI binary
+        run: cargo build --release --target aarch64-pc-windows-msvc -p clawgrep
+
+      - name: Package CLI binary
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "target/aarch64-pc-windows-msvc/release/clawgrep.exe" -DestinationPath "clawgrep-win-arm64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-aarch64-pc-windows-msvc
+          path: clawgrep-win-arm64.zip
+
+      # ── Node.js native addon ───────────────────────────────────────
+
+      - name: Install Node dependencies
+        working-directory: bindings/node
+        run: npm install
+
+      - name: Build native addon
+        working-directory: bindings/node
+        run: npx napi build --platform --release --target aarch64-pc-windows-msvc
+
+      - name: Copy CLI binary for Node package
+        shell: bash
+        working-directory: bindings/node
+        run: |
+          cp "../../target/aarch64-pc-windows-msvc/release/clawgrep.exe" "./clawgrep-aarch64-pc-windows-msvc.exe"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: node-aarch64-pc-windows-msvc
+          path: |
+            bindings/node/*.node
+            bindings/node/clawgrep-aarch64-pc-windows-msvc.exe
+
+      # ── Python wheel ───────────────────────────────────────────────
+
+      - name: Build Python wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: aarch64-pc-windows-msvc
+          args: --release --out dist -m bindings/python/Cargo.toml --find-interpreter
+        env:
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-aarch64-pc-windows-msvc
+          path: dist/*.whl

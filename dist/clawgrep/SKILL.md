@@ -9,15 +9,20 @@ description: >
   files, like memories. Output is grep-compatible for easy parsing.
 compatibility: >
   Requires the clawgrep binary on PATH. Works on Linux, macOS, and Windows.
-  No API keys or network access needed. Install via cargo, npm, or pip.
+  No API keys needed. On first run, downloads a small ONNX embedding model
+  (~30 MB) from Hugging Face and caches it locally. Subsequent runs are
+  fully offline. Install via cargo, npm, or pip.
 license: MIT OR Apache-2.0
 metadata:
   version: "0.1"
+  author: Schonhoffer
+  repository: https://github.com/Schonhoffer/clawgrep
+  homepage: https://github.com/Schonhoffer/clawgrep
 ---
 
 # clawgrep
 
-Semantic + keyword file search. Output is grep-compatible. Runs locally, no network access needed after (automatic) model download.
+Semantic + keyword file search. Output is grep-compatible. Runs fully locally. On first run, automatically downloads a small ONNX embedding model (~30 MB) from Hugging Face and caches it in the local cache directory. After that, all searches are offline.
 
 ## Check availability
 
@@ -25,7 +30,7 @@ Semantic + keyword file search. Output is grep-compatible. Runs locally, no netw
 clawgrep --version
 ```
 
-If not found, it can be installed with any of these methods (only one needed)
+If not found, install from the [open-source repository](https://github.com/Schonhoffer/clawgrep) using any of these methods (only one needed):
 
 ```bash
 cargo install clawgrep        # Rust (recommended)
