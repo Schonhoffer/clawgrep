@@ -34,14 +34,21 @@ If not found, install from the [open-source repository](https://github.com/Schon
 
 ```bash
 cargo install clawgrep        # Rust (recommended)
-npm install -g clawgrep        # Node.js
-pip install clawgrep           # Python
+npx clawgrep                  # Node.js (runs without global installation, avoids permission errors)
+npm install -g clawgrep       # Node.js (global install, may require admin/root privileges)
+pip install clawgrep          # Python
 ```
 
 ## Basic usage
 
+If installed globally or via cargo/pip:
 ```bash
 clawgrep --no-color "query" <path>
+```
+
+If using npx (Node.js fallback for environments without root access):
+```bash
+npx clawgrep --no-color "query" <path>
 ```
 
 Always pass `--no-color` when parsing output programmatically.
