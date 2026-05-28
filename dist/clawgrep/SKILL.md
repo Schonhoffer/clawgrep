@@ -87,7 +87,11 @@ Same as grep. Use `-q` for existence checks without output.
 
 ## Choosing search mode
 
-Default weights: 70% semantic, 30% keyword.
+Default RRF weights: `0.7` semantic, `0.3` keyword. The two ranked lists
+are fused with weighted Reciprocal Rank Fusion, so chunks that rank highly
+in both signals are preferred over chunks ranked #1 in only one. Raise
+`--keyword-weight` to bias toward exact strings, raise `--semantic-weight`
+to bias toward conceptual matches.
 
 **Concept search** (don't know exact wording):
 

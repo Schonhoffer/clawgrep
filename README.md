@@ -103,7 +103,7 @@ These match grep conventions.
 3. **Cache** embeddings and model weights in a platform-specific cache directory (or `--cache-dir`). The SQLite database and downloaded model files share the same directory. WAL mode allows concurrent readers and serialised writers; optimistic concurrency ensures newer embeddings always win.
 4. **Checkpoint** every 25 files during indexing, so interrupted runs resume from roughly where they stopped.
 5. **Keyword search** reads files from disk and does substring matching, regex matching, and basic stemming. This runs independently of embeddings and finds exact strings like barcodes, serial numbers, and error codes.
-6. **Rank** by combining scores: `score = semantic_weight * cosine(query, segment) + keyword_weight * keyword_match(query, segment)`. Results are sorted by combined score and truncated to top-k.
+6. **Rank** by fusing the two ranked lists with weighted Reciprocal Rank Fusion (Cormack 2009): `score = semantic_weight / (k + rank_semantic) + keyword_weight / (k + rank_keyword)` with `k = 60`. Chunks that rank highly in both signals are preferred over chunks that rank #1 in only one. Scores are normalised to `[0, 1]` so `--min-score` and `--show-score` keep the same scale regardless of weights. Results are sorted by fused score and truncated to top-k.
 
 Subsequent searches reuse cached embeddings. Only changed files are re-embedded. Multiple clawgrep processes can share the same cache without corruption.
 
@@ -138,9 +138,9 @@ clawgrep "query" ./src
 | `-B`, `--before-context` | 0 | Lines before match |
 | `-A`, `--after-context` | 0 | Lines after match |
 | `-C`, `--context` | 0 | Lines before and after |
-| `--min-score` | none | Minimum score threshold (0.0-1.0) |
-| `--semantic-weight` | 0.7 | Embedding similarity weight (0.0-1.0) |
-| `--keyword-weight` | 0.3 | Keyword (substring/regex) weight (0.0-1.0) |
+| `--min-score` | none | Minimum fused-score threshold (0.0-1.0) |
+| `--semantic-weight` | 0.7 | RRF weight for embedding similarity (0.0-1.0) |
+| `--keyword-weight` | 0.3 | RRF weight for keyword matching (0.0-1.0) |
 | `--reindex` | false | Force re-embedding |
 | `--no-cache` | false | Don't read or write cache |
 | `--cache-dir` | platform default | Custom cache directory |

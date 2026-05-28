@@ -544,6 +544,64 @@ fn path_boost_affects_ranking() {
     assert!(has_path_result, "high path_boost should surface path match");
 }
 
+// ── RRF fusion ─────────────────────────────────────────────────────────
+
+#[test]
+fn model_rrf_prefers_chunk_ranked_in_both_signals() {
+    // Three files:
+    // - both.md: matches the keyword "kubernetes" AND is semantically
+    //   related to "container orchestration cluster".
+    // - sem_only.md: semantically related, but does not contain the
+    //   literal word "kubernetes".
+    // - kw_only.md: contains "kubernetes" but in an off-topic sentence.
+    let dir = TempDir::new().unwrap();
+    fs::write(
+        dir.path().join("both.md"),
+        "Our kubernetes cluster runs multiple containerized microservices \
+         in production and auto-scales based on load.\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("sem_only.md"),
+        "We orchestrate our container workloads across a managed cluster \
+         that automatically schedules pods and balances load.\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("kw_only.md"),
+        "The word kubernetes appears here exactly once and otherwise this \
+         document is about baking sourdough bread.\n",
+    )
+    .unwrap();
+
+    let files = discover_files(dir.path(), &test_discover_opts());
+    let embedder = shared_embedder();
+    let index = build_index(&files, &embedder, &test_index_opts()).unwrap();
+    let results = hybrid_search(
+        "kubernetes container orchestration cluster",
+        &index,
+        &files,
+        &embedder,
+        &SearchOpts {
+            top_k: 3,
+            semantic_weight: 0.5,
+            keyword_weight: 0.5,
+            ..SearchOpts::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(results.len(), 3);
+    assert!(
+        results[0].file.ends_with("both.md"),
+        "RRF should rank the chunk ranked highly by both signals first; got {:?}",
+        results[0].file
+    );
+    // All scores should land in [0, 1].
+    for r in &results {
+        assert!(r.score >= 0.0 && r.score <= 1.0, "score = {}", r.score);
+    }
+}
+
 // ── Search opts ────────────────────────────────────────────────────────
 
 #[test]

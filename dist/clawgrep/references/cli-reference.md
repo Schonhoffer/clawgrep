@@ -57,6 +57,25 @@ Key differences from grep:
   Use `--cache-dir`, `CLAWGREP_CACHE_DIR`, or the config file to override.
 - Always case-insensitive. `-i` is accepted but has no effect.
 
+## Ranking
+
+Results are fused with weighted Reciprocal Rank Fusion (Cormack 2009):
+
+```
+score(chunk) = semantic_weight / (k + rank_semantic)
+             + keyword_weight  / (k + rank_keyword)
+```
+
+`k = 60` is a constant. A chunk missing from a ranker contributes `0` from
+that side. The final score is normalised to `[0, 1]` so `--min-score` and
+`--show-score` keep the same scale regardless of the weights.
+
+Practical consequence: a chunk that ranks highly in both the semantic and
+keyword lists beats a chunk that ranks #1 in only one. To bias toward
+exact-string matches, raise `--keyword-weight`. To bias toward conceptual
+matches, raise `--semantic-weight`. Setting one to `0` disables that
+ranker entirely.
+
 ## Environment variables
 
 | Variable | Description |
